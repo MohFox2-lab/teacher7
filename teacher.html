@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>لوحة المعلم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root{
+    --brand:#0f6e6b; --brand-dark:#0a4e4c;
+    --bg:#f3f7f6; --card:#ffffff; --line:#e1e8e7;
+    --text:#12302f; --sub:#5b7573; --err:#b3261e; --ok:#1e7a4a; --warn:#9a6b00;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .hidden{display:none !important}
+
+  /* ---------- شاشة الدخول ---------- */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .loginCard{
+    width:100%;max-width:380px;background:#fff;border:1px solid var(--line);border-radius:18px;
+    padding:30px 26px;box-shadow:0 12px 34px rgba(15,60,58,.08);text-align:center;
+  }
+  .loginCard .logo{
+    width:56px;height:56px;border-radius:16px;background:var(--brand);margin:0 auto 14px;
+    display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;
+  }
+  .loginCard h1{font-size:20px;font-weight:900;margin:0 0 20px;color:var(--brand-dark)}
+  .loginCard input{
+    width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-family:inherit;font-size:15px;margin-bottom:12px;background:#fbfdfd;
+  }
+  .loginCard input:focus{outline:none;border-color:var(--brand)}
+  .loginCard button{
+    width:100%;border:none;border-radius:12px;padding:13px;font-weight:900;font-size:15px;
+    background:var(--brand);color:#fff;cursor:pointer;
+  }
+  #loginErr{color:var(--err);font-size:13.5px;margin-top:10px;display:none}
+
+  /* ---------- لوحة التحكم ---------- */
+  header{
+    background:var(--brand);color:#fff;padding:16px 18px;display:flex;align-items:center;
+    justify-content:space-between;position:sticky;top:0;z-index:5;
+  }
+  header h1{font-size:17px;margin:0;font-weight:900}
+  header button{
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;
+    border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13.5px;cursor:pointer;
+  }
+  main{max-width:1080px;margin:0 auto;padding:20px 16px 70px}
+
+  .box{
+    background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;
+  }
+  .box h3{margin:0 0 10px;font-size:14.5px;font-weight:800;color:var(--brand-dark)}
+  textarea#manualCodes{
+    width:100%;min-height:80px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;
+    font-family:monospace;font-size:12.5px;direction:ltr;text-align:left;resize:vertical;
+  }
+  textarea#manualCodes:focus{outline:none;border-color:var(--brand)}
+  .rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  button.pillbtn{
+    border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:9px 15px;
+    font-family:inherit;font-size:13.5px;font-weight:700;color:var(--text);cursor:pointer;
+    transition:.15s;
+  }
+  button.pillbtn:hover{background:#f2f8f7}
+  button.pillbtn.active{background:var(--brand);border-color:var(--brand);color:#fff}
+  button.pillbtn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  button.pillbtn.primary:hover{background:var(--brand-dark)}
+  button.pillbtn.danger{border-color:#f3c6c2;color:var(--err)}
+  button.pillbtn.danger:hover{background:#fdecea}
+  button.pillbtn.danger.small{padding:4px 10px;font-size:12px;border-radius:9px}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .toolbar select, .toolbar input[type="text"]{
+    border:1.5px solid var(--line);border-radius:11px;padding:9px 13px;font-family:inherit;
+    font-size:13.5px;background:#fff;
+  }
+  .toolbar select:focus, .toolbar input:focus{outline:none;border-color:var(--brand)}
+  #searchBox{flex:1;min-width:180px}
+
+  .msg-inline{font-size:13px;margin-top:8px;font-weight:700;display:none}
+  .msg-inline.ok{color:var(--ok);display:block}
+  .msg-inline.err{color:var(--err);display:block}
+
+  h2.section{font-size:15.5px;font-weight:900;margin:22px 0 10px;color:var(--brand-dark)}
+  .hintline{font-size:12.5px;color:var(--sub);margin:-4px 0 14px;line-height:1.7}
+
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;
+        border:1px solid var(--line)}
+  th,td{padding:10px 11px;text-align:right;font-size:13px;border-bottom:1px solid var(--line)}
+  th{background:#eef5f4;font-weight:800;color:var(--brand-dark);white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  tr.clickable{cursor:pointer}
+  tr.clickable:hover{background:#f6faf9}
+  tr.focused{background:#e9f7ef}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800}
+  .pill.good{background:#e9f7ef;color:var(--ok)}
+  .pill.mid{background:#fff6e0;color:var(--warn)}
+  .pill.low{background:#fdecea;color:var(--err)}
+  .chip{display:inline-block;background:#eef5f4;color:var(--brand-dark);border-radius:8px;
+        padding:3px 10px;margin:2px;font-size:12.5px}
+  .empty{text-align:center;color:var(--sub);padding:40px 10px;font-size:14px}
+  .loading{text-align:center;color:var(--sub);padding:40px 10px;font-size:14px}
+  .none{color:var(--sub)}
+
+  .chapterCard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+  .chapterCard .title{font-weight:900;color:var(--brand-dark);font-size:14px;margin-bottom:8px}
+
+  @media print{
+    #loginScreen, header, .box, .toolbar, .no-print{display:none !important}
+    body{background:#fff}
+    main{padding:0;max-width:100%}
+    table{border:1px solid #000}
+    th,td{border:1px solid #000;font-size:11px}
+  }
+</style>
+</head>
+<body>
+
+<!-- شاشة الدخول -->
+<div id="loginScreen">
+  <div class="loginCard">
+    <div class="logo">🔒</div>
+    <h1>دخول المعلم</h1>
+    <form id="loginForm">
+      <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required autocomplete="username">
+      <input type="password" id="loginPass" placeholder="كلمة السر" required autocomplete="current-password">
+      <button type="submit" id="loginBtn">دخول</button>
+    </form>
+    <div id="loginErr">بيانات الدخول غير صحيحة</div>
+  </div>
+</div>
+
+<!-- لوحة التحكم -->
+<div id="dashboard" class="hidden">
+  <header class="no-print">
+    <h1>👨‍🏫 لوحة المعلم</h1>
+    <button id="logoutBtn">🔒 خروج</button>
+  </header>
+  <main>
+    <!-- صندوق التحقق اليدوي -->
+    <div class="box no-print">
+      <h3>✔️ تحقق يدوي من رموز</h3>
+      <div class="hintline">الصق رموز الطلاب (رمز في كل سطر أو مفصولة بمسافات) ثم اضغط «تحقق». هذي الرموز تُعرض فورًا هنا ولا تُحفظ في القاعدة — مفيدة لو استلمت رمز عبر واتساب مثلًا.</div>
+      <textarea id="manualCodes" placeholder="الصق رمز أو أكثر هنا…"></textarea>
+      <div class="rowbtns">
+        <button class="pillbtn primary" id="verifyBtn">✔️ تحقق</button>
+        <button class="pillbtn" id="clearManualBtn">مسح الرموز اليدوية</button>
+      </div>
+      <div id="manualMsg" class="msg-inline"></div>
+    </div>
+
+    <!-- أزرار العرض -->
+    <div class="rowbtns no-print" style="margin-bottom:14px">
+      <button class="pillbtn active" data-view="all">عرض جميع الطلاب والجلسات</button>
+      <button class="pillbtn" data-view="chapters">عرض الأبواب حسب الإتقان</button>
+      <button class="pillbtn" data-view="masteredOnly">عرض الأبواب المتقنة فقط</button>
+    </div>
+
+    <!-- فلاتر -->
+    <div class="toolbar no-print">
+      <select id="classFilter"><option value="">كل الفصول</option></select>
+      <input type="text" id="searchBox" placeholder="🔍 ابحث باسم الطالب…">
+      <button class="pillbtn" id="resetFocusBtn" style="display:none">↩ عرض كل الطلاب</button>
+      <button class="pillbtn danger" id="deleteAllBtn" style="margin-right:auto">🗑️ حذف كل الطلاب</button>
+    </div>
+
+    <!-- أزرار التصدير -->
+    <div class="rowbtns no-print" style="margin-bottom:6px">
+      <button class="pillbtn" id="exportCsv">⬇️ CSV</button>
+      <button class="pillbtn" id="exportPrint">🖨️ طباعة</button>
+      <button class="pillbtn" id="exportPdf">📕 PDF</button>
+      <button class="pillbtn" id="exportWord">📝 Word</button>
+    </div>
+
+    <div id="content"></div>
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, getDocs, query, orderBy, doc, deleteDoc, writeBatch
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { firebaseConfig, decodeCode, formatTimestamp, canonicalizeClass } from "./common.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const loginScreen = document.getElementById("loginScreen");
+const dashboard = document.getElementById("dashboard");
+const content = document.getElementById("content");
+
+// ---------------- تسجيل الدخول ----------------
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const pass = document.getElementById("loginPass").value;
+  const errEl = document.getElementById("loginErr");
+  errEl.style.display = "none";
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (err) {
+    errEl.style.display = "block";
+  }
+});
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loginScreen.classList.add("hidden");
+    dashboard.classList.remove("hidden");
+    loadData();
+  } else {
+    dashboard.classList.add("hidden");
+    loginScreen.classList.remove("hidden");
+  }
+});
+
+// ---------------- الحالة العامة ----------------
+let dbSubs = [];       // من Firestore
+let manualSubs = [];   // من اللصق اليدوي (لا تُحفظ)
+let studentsIndex = {};
+let state = { view: "all", cls: "", search: "", focusKey: "" };
+
+async function loadData() {
+  content.innerHTML = `<div class="loading">جارٍ تحميل البيانات…</div>`;
+  try {
+    const snap = await getDocs(query(collection(db, "submissions"), orderBy("createdAt", "desc")));
+    dbSubs = snap.docs.map(d => ({ id: d.id, source: "db", ...d.data() }));
+    rebuildAndRender();
+  } catch (err) {
+    console.error(err);
+    content.innerHTML = `<div class="empty">تعذّر تحميل البيانات. تأكد من الاتصال وحدّث الصفحة.</div>`;
+  }
+}
+
+// ---------------- التحقق اليدوي ----------------
+document.getElementById("verifyBtn").addEventListener("click", () => {
+  const raw = document.getElementById("manualCodes").value;
+  const lines = raw.split(/[\s]+/).map(s => s.trim()).filter(Boolean);
+  const msgEl = document.getElementById("manualMsg");
+  if (!lines.length) {
+    msgEl.textContent = "الصق رمز واحد على الأقل.";
+    msgEl.className = "msg-inline err";
+    return;
+  }
+  let ok = 0, bad = 0;
+  lines.forEach(code => {
+    const d = decodeCode(code);
+    if (!d) { bad++; return; }
+    ok++;
+    manualSubs.push({
+      source: "manual",
+      studentName: d.name,
+      studentClass: d.cls,
+      rosterNumber: d.studentNumber,
+      decodedVersion: d.version,
+      decodedName: d.name,
+      decodedClass: d.cls,
+      decodedStudentNumber: d.studentNumber,
+      decodedTimestamp: d.timestamp,
+      correct: d.correct,
+      total: d.total,
+      minutes: d.minutes,
+      mastered: d.mastered
+    });
+  });
+  msgEl.textContent = bad
+    ? `تم التحقق من ${ok} رمز، وتعذّر فك ${bad} رمز (تأكد إنه منسوخ كامل).`
+    : `✅ تم التحقق من ${ok} رمز بنجاح.`;
+  msgEl.className = "msg-inline " + (bad && !ok ? "err" : "ok");
+  document.getElementById("manualCodes").value = "";
+  rebuildAndRender();
+});
+
+document.getElementById("clearManualBtn").addEventListener("click", () => {
+  manualSubs = [];
+  document.getElementById("manualMsg").textContent = "";
+  document.getElementById("manualMsg").className = "msg-inline";
+  rebuildAndRender();
+});
+
+// ---------------- أزرار العرض ----------------
+document.querySelectorAll("button[data-view]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("button[data-view]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.view = btn.dataset.view;
+    state.focusKey = "";
+    render();
+  });
+});
+
+document.getElementById("classFilter").addEventListener("change", (e) => {
+  state.cls = e.target.value; state.focusKey = ""; render();
+});
+document.getElementById("searchBox").addEventListener("input", (e) => {
+  state.search = e.target.value.trim(); state.focusKey = ""; render();
+});
+document.getElementById("resetFocusBtn").addEventListener("click", () => {
+  state.focusKey = ""; render();
+});
+
+// ---------------- بناء الفهرس ----------------
+function rebuildAndRender() {
+  const all = dbSubs.concat(manualSubs);
+  studentsIndex = {};
+  for (const s of all) {
+    const cls = canonicalizeClass(s.decodedClass || s.studentClass || "") || "غير محدد";
+    const key = s.decodedStudentNumber
+      ? `${cls}#${s.decodedStudentNumber}`
+      : `${cls}#${s.decodedName || s.studentName}`;
+    if (!studentsIndex[key]) {
+      studentsIndex[key] = {
+        key, cls,
+        name: s.studentName || s.decodedName || "بدون اسم",
+        rosterNumber: s.rosterNumber || s.decodedStudentNumber || "",
+        sessions: []
+      };
+    }
+    studentsIndex[key].sessions.push(s);
+  }
+  Object.values(studentsIndex).forEach(st => {
+    st.sessions.sort((a, b) => (b.decodedTimestamp || "").localeCompare(a.decodedTimestamp || ""));
+  });
+
+  // تحديث قائمة الفصول بالفلتر
+  const clsSel = document.getElementById("classFilter");
+  const current = clsSel.value;
+  const classes = [...new Set(Object.values(studentsIndex).map(s => s.cls))].sort((a, b) => a.localeCompare(b, "ar"));
+  clsSel.innerHTML = `<option value="">كل الفصول</option>` + classes.map(c => `<option value="${escapeAttr(c)}">الفصل ${escapeHtml(c)}</option>`).join("");
+  clsSel.value = classes.includes(current) ? current : "";
+  state.cls = clsSel.value;
+
+  render();
+}
+
+function getFilteredStudents() {
+  let list = Object.values(studentsIndex);
+  if (state.cls) list = list.filter(s => s.cls === state.cls);
+  if (state.search) list = list.filter(s => s.name.includes(state.search) || (s.rosterNumber + "").includes(state.search));
+  if (state.view === "masteredOnly") {
+    list = list.filter(s => {
+      const set = new Set(); s.sessions.forEach(ss => (ss.mastered || []).forEach(m => set.add(m)));
+      return set.size > 0;
+    });
+  }
+  if (state.focusKey) list = list.filter(s => s.key === state.focusKey);
+  return list.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+}
+
+function accuracyPill(correct, total) {
+  if (!total) return `<span class="pill mid">—</span>`;
+  const pct = Math.round((correct / total) * 100);
+  const cls = pct >= 75 ? "good" : pct >= 50 ? "mid" : "low";
+  return `<span class="pill ${cls}">${pct}%</span>`;
+}
+
+// ---------------- العرض الرئيسي ----------------
+function render() {
+  document.getElementById("resetFocusBtn").style.display = state.focusKey ? "inline-block" : "none";
+
+  if (!dbSubs.length && !manualSubs.length) {
+    content.innerHTML = `<div class="empty">ما وصلت أي رموز إنجاز بعد — انتظر إرسال الطلاب، أو جرّب التحقق اليدوي فوق.</div>`;
+    return;
+  }
+
+  if (state.view === "chapters") { renderChaptersView(); return; }
+  renderAllView(); // "all" و "masteredOnly" يشتركان بنفس شكل الجدولين
+}
+
+function renderAllView() {
+  const students = getFilteredStudents();
+
+  if (!students.length) {
+    content.innerHTML = `<div class="empty">ما فيه نتائج مطابقة للفلاتر الحالية.</div>`;
+    return;
+  }
+
+  const summaryRows = students.map(st => {
+    const totalQ = st.sessions.reduce((a, s) => a + (s.total || 0), 0);
+    const totalC = st.sessions.reduce((a, s) => a + (s.correct || 0), 0);
+    const masteredSet = new Set(); st.sessions.forEach(s => (s.mastered || []).forEach(m => masteredSet.add(m)));
+    return `
+      <tr class="clickable ${state.focusKey === st.key ? "focused" : ""}" data-key="${escapeAttr(st.key)}">
+        <td>${escapeHtml(st.name)}</td>
+        <td>${escapeHtml(st.rosterNumber || "—")}</td>
+        <td>${escapeHtml(st.cls)}</td>
+        <td>${st.sessions.length}</td>
+        <td>${totalQ}</td>
+        <td>${accuracyPill(totalC, totalQ)}</td>
+        <td>${masteredSet.size ? masteredSet.size + " باب" : "لا يوجد باب متقن بالكامل بعد"}</td>
+        <td class="no-print"><button class="pillbtn danger small" data-del-student="${escapeAttr(st.key)}" title="حذف هذا الطالب وكل جلساته">🗑️</button></td>
+      </tr>`;
+  }).join("");
+
+  const allSessions = [];
+  students.forEach(st => st.sessions.forEach(s => allSessions.push({ st, s })));
+  allSessions.sort((a, b) => (b.s.decodedTimestamp || "").localeCompare(a.s.decodedTimestamp || ""));
+
+  const sessionRows = allSessions.map(({ st, s }, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(st.name)}</td>
+      <td>${escapeHtml(st.rosterNumber || "—")}</td>
+      <td>${escapeHtml(st.cls)}</td>
+      <td>${formatTimestamp(s.decodedTimestamp)}</td>
+      <td>${s.correct || 0}/${s.total || 0} (${s.total ? Math.round((s.correct / s.total) * 100) : 0}%)</td>
+      <td>${s.minutes || 0} د</td>
+      <td>${(s.mastered && s.mastered.length) ? s.mastered.join("، ") : "—"}</td>
+      <td>✅</td>
+      <td class="no-print">${s.source === "db" && s.id ? `<button class="pillbtn danger small" data-del-session="${escapeAttr(s.id)}" data-del-key="${escapeAttr(st.key)}" title="حذف هذه الجلسة فقط">🗑️</button>` : `<span class="none" title="رمز تحقق يدوي، غير محفوظ أصلاً">يدوي</span>`}</td>
+    </tr>`).join("");
+
+  content.innerHTML = `
+    <div id="exportArea">
+      <h2 class="section">ملخص الطلاب</h2>
+      <table id="summaryTable">
+        <thead><tr>
+          <th>الطالب</th><th>رقم الطالب</th><th>الفصل</th><th>الجلسات</th>
+          <th>عدد الأسئلة</th><th>الدقة</th><th>الأبواب المتقنة</th><th class="no-print"></th>
+        </tr></thead>
+        <tbody>${summaryRows}</tbody>
+      </table>
+
+      <h2 class="section">تفاصيل الجلسات</h2>
+      <table id="sessionsTable">
+        <thead><tr>
+          <th>#</th><th>الطالب</th><th>رقم الطالب</th><th>الفصل</th><th>الوقت</th>
+          <th>النتيجة</th><th>المدة</th><th>الأبواب المتقنة</th><th></th><th class="no-print"></th>
+        </tr></thead>
+        <tbody>${sessionRows}</tbody>
+      </table>
+    </div>
+  `;
+
+  content.querySelectorAll("tr.clickable[data-key]").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("[data-del-student]")) return; // لا تفعّل التركيز عند الضغط على زر الحذف
+      state.focusKey = state.focusKey === row.dataset.key ? "" : row.dataset.key;
+      render();
+    });
+  });
+
+  content.querySelectorAll("[data-del-student]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteStudent(btn.dataset.delStudent);
+    });
+  });
+  content.querySelectorAll("[data-del-session]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteSession(btn.dataset.delSession, btn.dataset.delKey);
+    });
+  });
+}
+
+// ---------------- الحذف ----------------
+async function deleteStudent(key) {
+  const st = studentsIndex[key];
+  if (!st) return;
+  const ok = confirm(`متأكد تبي تحذف الطالب «${st.name}» وكل جلساته (${st.sessions.length})؟ هذا الإجراء لا يمكن التراجع عنه.`);
+  if (!ok) return;
+
+  const dbIds = st.sessions.filter(s => s.source === "db" && s.id).map(s => s.id);
+  try {
+    if (dbIds.length) {
+      const batch = writeBatch(db);
+      dbIds.forEach(id => batch.delete(doc(db, "submissions", id)));
+      await batch.commit();
+    }
+    dbSubs = dbSubs.filter(s => !dbIds.includes(s.id));
+    manualSubs = manualSubs.filter(s => {
+      const cls = s.decodedClass || s.studentClass || "غير محدد";
+      const k = s.decodedStudentNumber ? `${cls}#${s.decodedStudentNumber}` : `${cls}#${s.decodedName || s.studentName}`;
+      return k !== key;
+    });
+    if (state.focusKey === key) state.focusKey = "";
+    rebuildAndRender();
+  } catch (err) {
+    console.error(err);
+    alert("تعذّر حذف الطالب. تأكد من الاتصال وحاول مرة أخرى.");
+  }
+}
+
+async function deleteSession(docId, key) {
+  const ok = confirm("متأكد تبي تحذف هذي الجلسة فقط؟");
+  if (!ok) return;
+  try {
+    await deleteDoc(doc(db, "submissions", docId));
+    dbSubs = dbSubs.filter(s => s.id !== docId);
+    rebuildAndRender();
+  } catch (err) {
+    console.error(err);
+    alert("تعذّر حذف الجلسة. تأكد من الاتصال وحاول مرة أخرى.");
+  }
+}
+
+document.getElementById("deleteAllBtn").addEventListener("click", async () => {
+  if (!dbSubs.length) { alert("ما فيه بيانات محفوظة للحذف."); return; }
+  const typed = prompt(`سيتم حذف كل الطلاب وكل الجلسات نهائيًا من كل الفصول (${dbSubs.length} جلسة). للتأكيد، اكتب كلمة "حذف" بالضبط:`);
+  if (typed !== "حذف") { if (typed !== null) alert("لم تتم كتابة الكلمة بشكل صحيح، تم الإلغاء."); return; }
+  try {
+    const ids = dbSubs.map(s => s.id);
+    const CHUNK = 450; // حد أقصى آمن لكل batch في Firestore
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      ids.slice(i, i + CHUNK).forEach(id => batch.delete(doc(db, "submissions", id)));
+      await batch.commit();
+    }
+    dbSubs = [];
+    manualSubs = [];
+    state.focusKey = "";
+    rebuildAndRender();
+    alert("تم حذف جميع الطلاب والجلسات.");
+  } catch (err) {
+    console.error(err);
+    alert("تعذّر حذف البيانات بالكامل. حاول مرة أخرى، أو احذف الطلاب واحدًا واحدًا.");
+  }
+});
+
+function renderChaptersView() {
+  const students = getFilteredStudents();
+  const chapterMap = {}; // chapterLabel -> [studentNames]
+  students.forEach(st => {
+    const set = new Set(); st.sessions.forEach(s => (s.mastered || []).forEach(m => set.add(m)));
+    set.forEach(ch => {
+      if (!chapterMap[ch]) chapterMap[ch] = [];
+      chapterMap[ch].push(st.name);
+    });
+  });
+  const chapters = Object.keys(chapterMap).sort((a, b) => a.localeCompare(b, "ar"));
+
+  if (!chapters.length) {
+    content.innerHTML = `<div class="empty">ما فيه أي باب متقن بالكامل بعد لدى الطلاب الحاليين.</div>`;
+    return;
+  }
+
+  content.innerHTML = `
+    <div id="exportArea">
+      <h2 class="section">الأبواب حسب الإتقان</h2>
+      ${chapters.map(ch => `
+        <div class="chapterCard">
+          <div class="title">📕 ${escapeHtml(ch)} — ${chapterMap[ch].length} طالب</div>
+          <div>${chapterMap[ch].map(n => `<span class="chip">${escapeHtml(n)}</span>`).join(" ")}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+// ---------------- التصدير ----------------
+document.getElementById("exportPrint").addEventListener("click", () => window.print());
+
+document.getElementById("exportCsv").addEventListener("click", () => {
+  const table = document.getElementById("summaryTable");
+  if (!table) { alert("ما فيه جدول للتصدير حاليًا."); return; }
+  let csv = "\uFEFF";
+  table.querySelectorAll("tr").forEach(tr => {
+    const cells = [...tr.children].map(td => `"${td.innerText.replace(/"/g, '""')}"`);
+    csv += cells.join(",") + "\r\n";
+  });
+  downloadBlob(csv, "text/csv;charset=utf-8", "ملخص_الطلاب.csv");
+});
+
+document.getElementById("exportWord").addEventListener("click", () => {
+  const area = document.getElementById("exportArea");
+  if (!area) { alert("ما فيه محتوى للتصدير حاليًا."); return; }
+  const html = `
+    <html dir="rtl"><head><meta charset="utf-8"><style>
+      body{font-family:Tahoma,Arial;font-size:13px}
+      table{border-collapse:collapse;width:100%;margin-bottom:20px}
+      th,td{border:1px solid #999;padding:6px 8px;text-align:right}
+      th{background:#eef5f4}
+    </style></head><body>${area.innerHTML}</body></html>`;
+  downloadBlob(html, "application/msword", "تقرير_الطلاب.doc");
+});
+
+document.getElementById("exportPdf").addEventListener("click", () => {
+  const area = document.getElementById("exportArea");
+  if (!area) { alert("ما فيه محتوى للتصدير حاليًا."); return; }
+  if (typeof html2pdf === "undefined") { alert("تعذّر تحميل أداة PDF، جرّب الطباعة بدلاً منها."); return; }
+  html2pdf().set({
+    margin: 10,
+    filename: "تقرير_الطلاب.pdf",
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
+  }).from(area).save();
+});
+
+function downloadBlob(content, mime, filename) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------- أدوات مساعدة ----------------
+function escapeHtml(str) {
+  return (str ?? "").toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function escapeAttr(str) { return escapeHtml(str).replace(/"/g, "&quot;"); }
+</script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>إرسال رمز الإنجاز</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#0f6e6b; --brand-dark:#0a4e4c; --bg:#f3f7f6;
+    --card:#fff; --line:#e1e8e7; --text:#12302f; --sub:#5b7573;
+    --err:#b3261e; --ok:#1e7a4a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:'Tajawal',sans-serif;
+    background:linear-gradient(180deg,#eaf4f2 0%,var(--bg) 220px);
+    color:var(--text);padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);min-height:100%;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:28px 18px 60px}
+  .logo{
+    width:56px;height:56px;border-radius:16px;background:var(--brand);
+    display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;
+    margin:0 auto 14px;box-shadow:0 6px 16px rgba(15,110,107,.25)
+  }
+  h1{font-size:22px;font-weight:900;text-align:center;margin:0 0 4px;color:var(--brand-dark)}
+  p.sub{text-align:center;color:var(--sub);margin:0 0 26px;font-size:14.5px;line-height:1.7}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 10px 30px rgba(15,60,58,.06)}
+  label{display:block;font-weight:700;font-size:14px;margin:0 0 6px;color:var(--text)}
+  .field{margin-bottom:16px}
+  input,textarea{
+    width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-family:inherit;font-size:15px;background:#fbfdfd;color:var(--text);transition:border-color .15s
+  }
+  input:focus,textarea:focus{outline:none;border-color:var(--brand)}
+  textarea{min-height:96px;resize:vertical;font-family:monospace;direction:ltr;text-align:left;font-size:13px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  button{
+    width:100%;border:none;border-radius:14px;padding:15px;font-family:inherit;
+    font-size:16px;font-weight:900;color:#fff;background:var(--brand);
+    cursor:pointer;-webkit-appearance:none;appearance:none;touch-action:manipulation;
+  }
+  button:active{transform:scale(.98)}
+  button:disabled{background:#9db3b1;cursor:not-allowed}
+  .hint{font-size:12.5px;color:var(--sub);margin-top:8px;line-height:1.6}
+  .msg{margin-top:16px;padding:14px 16px;border-radius:12px;font-size:14.5px;font-weight:700;line-height:1.7}
+  .msg.ok{background:#e9f7ef;color:var(--ok);border:1px solid #bfe6cf}
+  .msg.err{background:#fdecea;color:var(--err);border:1px solid #f6cbc6}
+  .msg.info{background:#eef7f6;color:var(--brand-dark);border:1px solid #cde2df}
+  .preview{margin-top:14px;padding:12px 14px;border-radius:12px;background:#f2f8f7;border:1px dashed #bcdad7;font-size:13.5px;color:var(--brand-dark);line-height:1.9}
+  .preview b{color:var(--text)}
+  footer{text-align:center;margin-top:26px;font-size:12px;color:#8ba3a1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">🧪</div>
+  <h1>إرسال رمز الإنجاز</h1>
+  <p class="sub">اكتب بياناتك والصق رمز الإنجاز اللي يطلعه لك التطبيق، ثم اضغط إرسال.</p>
+
+  <div class="card">
+    <div class="field">
+      <label>الاسم الكامل</label>
+      <input type="text" id="studentName" placeholder="مثال: أحمد سعيد الزاهر" autocomplete="name">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>الفصل</label>
+        <input type="text" id="studentClass" placeholder="مثال: 1 أو 1/أ">
+      </div>
+      <div class="field">
+        <label>رقمك في الكشف</label>
+        <input type="text" inputmode="numeric" id="rosterNumber" placeholder="مثال: 12">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>رمز الإنجاز</label>
+      <textarea id="code" placeholder="الصق الرمز هنا…"></textarea>
+      <div class="hint">الرمز يطلع لك داخل التطبيق بعد إنهاء الاختبار — انسخه كامل وألصقه هنا.</div>
+    </div>
+
+    <div id="preview" class="preview" hidden></div>
+    <div id="msg" class="msg info">جاري تجهيز الاتصال…</div>
+
+    <button type="button" id="submitBtn" style="margin-top:6px" disabled>جاري تجهيز الإرسال…</button>
+  </div>
+
+  <footer>بياناتك ترسل للمعلم فقط — ولا يقدر أي طالب آخر يشوفها</footer>
+</div>
+
+<!--
+  v2:
+  نستخدم Firebase Compat بدل ES Modules هنا.
+  الهدف: زيادة التوافق مع Safari/iPhone وبعض المتصفحات المضمنة داخل التطبيقات.
+-->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCx6sM4KaYXCXABxE9ieio_QhPDX-SP6xg",
+    authDomain: "manhaj-science1.firebaseapp.com",
+    projectId: "manhaj-science1",
+    storageBucket: "manhaj-science1.firebasestorage.app",
+    messagingSenderId: "275504808566",
+    appId: "1:275504808566:web:16d3951b587e2727c9d557"
+  };
+
+  const $ = id => document.getElementById(id);
+  const codeEl = $("code");
+  const previewEl = $("preview");
+  const msgEl = $("msg");
+  const submitBtn = $("submitBtn");
+
+  function showMsg(text, type) {
+    msgEl.textContent = text;
+    msgEl.className = "msg " + (type || "info");
+    msgEl.hidden = false;
+  }
+
+  function decodeCode(raw) {
+    if (!raw) return null;
+
+    const trimmed = String(raw).trim().replace(/\s+/g, "");
+    // بعض الأجهزة تولّد رمزًا بدون لاحقة التحقق (.xxxxxx) — نقبله ولا نرفضه
+    const dotIdx = trimmed.lastIndexOf(".");
+    const payload = dotIdx === -1 ? trimmed : trimmed.slice(0, dotIdx);
+    const checksum = dotIdx === -1 ? "" : trimmed.slice(dotIdx + 1);
+    let decodedText;
+
+    try {
+      let b64 = payload;
+      while (b64.length % 4 !== 0) b64 += "=";
+
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+      if (window.TextDecoder) {
+        decodedText = new TextDecoder("utf-8").decode(bytes);
+      } else {
+        let escaped = "";
+        for (let i = 0; i < bytes.length; i++) {
+          escaped += "%" + ("00" + bytes[i].toString(16)).slice(-2);
+        }
+        decodedText = decodeURIComponent(escaped);
+      }
+    } catch (e) {
+      return null;
+    }
+
+    const parts = decodedText.split("|");
+    if (parts.length < 5) return null;
+
+    if (parts[0] === "v3") {
+      return {
+        version: "v3",
+        name: parts[1] || "",
+        cls: parts[2] || "",
+        studentNumber: parts[3] || "",
+        timestamp: parts[4] || "",
+        correct: parseInt(parts[5] || "0", 10) || 0,
+        total: parseInt(parts[6] || "0", 10) || 0,
+        minutes: parseInt(parts[7] || "0", 10) || 0,
+        mastered: parts[8] ? parts[8].split(",").filter(Boolean) : [],
+        checksum: checksum,
+        raw: trimmed
+      };
+    }
+
+    return {
+      version: "v1",
+      name: parts[0] || "",
+      cls: parts[1] || "",
+      studentNumber: "",
+      timestamp: parts[2] || "",
+      correct: parseInt(parts[3] || "0", 10) || 0,
+      total: parseInt(parts[4] || "0", 10) || 0,
+      minutes: parseInt(parts[5] || "0", 10) || 0,
+      mastered: [],
+      checksum: checksum,
+      raw: trimmed
+    };
+  }
+
+  function formatTimestamp(ts) {
+    if (!ts || ts.length < 12) return ts || "—";
+    return ts.slice(0,4) + "/" + ts.slice(4,6) + "/" + ts.slice(6,8) +
+           " " + ts.slice(8,10) + ":" + ts.slice(10,12);
+  }
+
+  function renderPreview() {
+    const decoded = decodeCode(codeEl.value);
+
+    if (!decoded) {
+      previewEl.hidden = true;
+      return;
+    }
+
+    const acc = decoded.total
+      ? Math.round((decoded.correct / decoded.total) * 100)
+      : 0;
+
+    previewEl.innerHTML =
+      "<b>معاينة الرمز:</b> " + (decoded.name || "—") +
+      " · النتيجة " + decoded.correct + "/" + decoded.total + " (" + acc + "%)" +
+      " · " + formatTimestamp(decoded.timestamp) +
+      (decoded.mastered.length ? " · أبواب متقنة: " + decoded.mastered.length : "");
+
+    previewEl.hidden = false;
+  }
+
+  codeEl.addEventListener("input", renderPreview);
+
+  window.addEventListener("error", function () {
+    if (!submitBtn.dataset.ready) {
+      submitBtn.disabled = true;
+      showMsg("تعذر تحميل خدمة الإرسال. افتح الرابط في Safari أو Chrome ثم حاول مرة أخرى.", "err");
+    }
+  });
+
+  // حارس زمني: لو التحميل تعلّق بدون نجاح ولا فشل صريح خلال 8 ثوانٍ
+  // (شبكة بطيئة جدًا أو حجب صامت)، نوضح للطالب بدل ما يضل ينتظر بلا تفسير
+  setTimeout(function () {
+    if (!submitBtn.dataset.ready) {
+      submitBtn.disabled = true;
+      showMsg(
+        "تعذر تجهيز خدمة الإرسال خلال وقت معقول. جرّب: متصفح ثاني (Safari أو Chrome)، أو شبكة إنترنت ثانية (بيانات الجوال بدل واي فاي المدرسة مثلًا).",
+        "err"
+      );
+    }
+  }, 8000);
+
+  try {
+    if (!window.firebase || !firebase.firestore) {
+      throw new Error("Firebase SDK not loaded");
+    }
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    submitBtn.disabled = false;
+    submitBtn.dataset.ready = "1";
+    submitBtn.textContent = "إرسال";
+    showMsg("جاهز للإرسال.", "info");
+
+    submitBtn.addEventListener("click", async function () {
+      const studentName = $("studentName").value.trim();
+      const studentClass = $("studentClass").value.trim();
+      const rosterNumber = $("rosterNumber").value.trim();
+      const rawCode = codeEl.value.trim();
+
+      if (!studentName || !studentClass || !rosterNumber || !rawCode) {
+        showMsg("أكمل الاسم والفصل ورقم الكشف ورمز الإنجاز أولًا.", "err");
+        return;
+      }
+
+      const decoded = decodeCode(rawCode);
+      if (!decoded) {
+        showMsg("الرمز غير صالح أو مقصوص. تأكد إنك نسخته كامل من التطبيق وحاول مرة ثانية.", "err");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "جارٍ الإرسال…";
+      showMsg("جارٍ إرسال الرمز…", "info");
+
+      try {
+        await db.collection("submissions").add({
+          studentName: studentName,
+          studentClass: studentClass,
+          rosterNumber: rosterNumber,
+          rawCode: rawCode,
+          decodedVersion: decoded.version,
+          decodedName: decoded.name,
+          decodedClass: decoded.cls,
+          decodedStudentNumber: decoded.studentNumber,
+          decodedTimestamp: decoded.timestamp,
+          correct: decoded.correct,
+          total: decoded.total,
+          minutes: decoded.minutes,
+          mastered: decoded.mastered,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showMsg("✅ تم إرسال الرمز بنجاح. المعلم يقدر يشوف نتيجتك الآن.", "ok");
+
+        $("studentName").value = "";
+        $("studentClass").value = "";
+        $("rosterNumber").value = "";
+        codeEl.value = "";
+        previewEl.hidden = true;
+
+      } catch (err) {
+        console.error("Firestore submit error:", err);
+        showMsg(
+          "تعذّر الإرسال. إذا كانت البيانات صحيحة، جرّب فتح الرابط في Safari أو Chrome والتأكد من الإنترنت.",
+          "err"
+        );
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "إرسال";
+      }
+    });
+
+  } catch (err) {
+    console.error("Initialization error:", err);
+    showMsg("تعذر تشغيل خدمة الإرسال في هذا المتصفح. جرّب Safari أو Chrome.", "err");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "الإرسال غير متاح";
+  }
+})();
+</script>
+</body>
+</html>

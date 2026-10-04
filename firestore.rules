@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /submissions/{docId} {
+      // أي زائر يقدر يرسل رمز إنجاز جديد (الطالب) لكنه لا يقدر يقرأ أو يعدّل أو يحذف
+      allow create: if
+        request.resource.data.keys().hasAll(['studentName','studentClass','rosterNumber','rawCode','createdAt']) &&
+        request.resource.data.studentName is string &&
+        request.resource.data.studentClass is string &&
+        request.resource.data.rosterNumber is string &&
+        request.resource.data.rawCode is string;
+
+      // القراءة والتعديل والحذف للمعلم المسجّل دخوله فقط
+      allow read, update, delete: if request.auth != null;
+    }
+  }
+}
