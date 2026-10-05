@@ -26,7 +26,8 @@ export function decodeCode(raw) {
 
   let decodedText;
   try {
-    let b64 = payload;
+    // التطبيق يولّد الرمز بترميز base64 "آمن للروابط" (- و _ بدل + و /)
+    let b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
     while (b64.length % 4 !== 0) b64 += "=";
     const binary = atob(b64);
     const bytes = new Uint8Array(binary.length);
