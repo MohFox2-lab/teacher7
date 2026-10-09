@@ -189,14 +189,15 @@ export function generatePin() {
 }
 
 export const DEFAULT_GRADING = {
-  testMax: 10,        // درجة الاختبار
+  testMax: 20,        // درجة الاختبار (التحديث الوزاري: 20)
   hwMax: 10,          // درجة الواجبات
   partMax: 10,        // درجة المشاركة
   taskMax: 20,        // درجة الأداء المهامي
   scoredTopics: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // المواضيع المحسوبة بالدرجات
   topicPoints: {},    // تعديل يدوي لدرجة كل موضوع (اختياري)
   currentTask: { title: "", autoFullOnSubmit: true },
-  showBehaviorToParents: true
+  showBehaviorToParents: true,
+  hwMode: "solved"   // طريقة حساب الواجبات: solved = من المواضيع المحلولة، mastered = من المواضيع المتقنة
 };
 
 export function normalizeGrading(g) {
@@ -220,10 +221,11 @@ export function topicTestPoints(grading, i) {
 
 // يحسب تقرير الطالب كاملاً
 // mastered/attempted: مصفوفات أرقام مواضيع  |  record: سجل المعلم  |  taskDelivered: هل سلّم المهمة
-export function computeReport({ grading, mastered, attempted, record, taskDelivered }) {
+export function computeReport({ grading, mastered, attempted, solved, record, taskDelivered }) {
   const g = normalizeGrading(grading);
   const M = new Set((mastered || []).map(Number));
   const A = new Set((attempted || []).map(Number));
+  const S = new Set((solved || []).map(Number));
   const rec = record || {};
   const n = g.scoredTopics.length;
   const hwShare = n ? r1(g.hwMax / n) : 0;
@@ -232,10 +234,14 @@ export function computeReport({ grading, mastered, attempted, record, taskDelive
   const topics = g.scoredTopics.map(i => {
     const pts = topicTestPoints(g, i);
     let status = "none";
-    if (M.has(i)) status = "mastered";
-    else if (A.has(i)) status = "attempted";
-    if (status === "mastered") { testScore += pts; hwScore += hwShare; masteredCount++; }
-    return { i, title: TOPIC_TITLES[i] || ("موضوع " + i), status, testPts: pts, hwPts: hwShare };
+    if (M.has(i)) status = "mastered";          // أجاب كل الأسئلة وأتقنها
+    else if (S.has(i)) status = "solved";       // أجاب كل الأسئلة ولم يتقنها كلها
+    else if (A.has(i)) status = "started";      // بدأ ولم يكمل
+    // الاختبار: من الإتقان دائمًا. الواجب: من الحل أو من الإتقان حسب إعداد المعلم
+    const hwDone = g.hwMode === "mastered" ? status === "mastered" : (status === "mastered" || status === "solved");
+    if (status === "mastered") { testScore += pts; masteredCount++; }
+    if (hwDone) hwScore += hwShare;
+    return { i, title: TOPIC_TITLES[i] || ("موضوع " + i), status, testPts: pts, hwPts: hwShare, hwDone };
   });
   testScore = Math.min(r1(testScore), g.testMax);
   hwScore = Math.min(r1(hwScore), g.hwMax);

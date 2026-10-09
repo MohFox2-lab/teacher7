@@ -440,12 +440,13 @@ const fmtScore = (v, max) => (v === null || v === undefined ? "—" : v) + " / "
 function studentRecKey(st) { return st.number ? recKey(st.cls, st.number) : ""; }
 
 function masteredAttempted(st) {
-  const M = new Set(), A = new Set();
+  const M = new Set(), A = new Set(), S = new Set();
   st.sessions.forEach(s => {
     (s.mastered || []).forEach(m => { const n = parseInt(m, 10); if (!isNaN(n)) M.add(n); });
     (s.attempted || []).forEach(a => { const n = parseInt(a, 10); if (!isNaN(n)) A.add(n); });
+    (s.solved || []).forEach(a => { const n = parseInt(a, 10); if (!isNaN(n)) S.add(n); });
   });
-  return { mastered: [...M], attempted: [...A] };
+  return { mastered: [...M], attempted: [...A], solved: [...S] };
 }
 
 function studentTaskSubs(st) {
@@ -456,10 +457,10 @@ function studentTaskSubs(st) {
 }
 
 function studentReport(st) {
-  const { mastered, attempted } = masteredAttempted(st);
+  const { mastered, attempted, solved } = masteredAttempted(st);
   const rk = studentRecKey(st);
   return computeReport({
-    grading, mastered, attempted,
+    grading, mastered, attempted, solved,
     record: records[rk] || {},
     taskDelivered: studentTaskSubs(st).length > 0
   });
@@ -586,9 +587,9 @@ function renderStudentDetail(key) {
   const editing = state.editBh ? (rec.behaviors || []).find(b => b.id === state.editBh) : null;
   const subs = studentTaskSubs(st);
 
-  const stLabel = { mastered: "🟢 متقن", attempted: "🟡 حل ولم يتقن", none: "🔴 لم يحل" };
-  const hwLabel = (t) => t.status === "mastered" ? "✅ " + t.hwPts + " / " + t.hwPts
-    : t.status === "attempted" ? "🟡 حل ولم يتقن" : "❌ لم يحل الواجب";
+  const stLabel = { mastered: "🟢 متقن", solved: "🟡 حل ولم يتقن", started: "🟠 بدأ ولم يكمل", none: "🔴 لم يحل" };
+  const hwLabel = (t) => t.hwDone ? "✅ " + t.hwPts + " / " + t.hwPts
+    : (t.status === "started" || t.status === "solved") ? "🟠 لم يكمل الواجب" : "❌ لم يحل الواجب";
   const topicRows = rep.topics.map(t => `<tr>
       <td>${escapeHtml(t.title)}</td><td>${stLabel[t.status]}</td>
       <td>${t.status === "mastered" ? t.testPts : 0} / ${t.testPts}</td><td>${hwLabel(t)}</td></tr>`).join("");
@@ -773,6 +774,8 @@ function syncGradingDraft() {
   if (t) gradingDraft.currentTask.title = t.value.trim();
   const a = document.getElementById("gAuto");
   if (a) gradingDraft.currentTask.autoFullOnSubmit = a.checked;
+  const hm = document.getElementById("gHwMode");
+  if (hm) gradingDraft.hwMode = hm.value;
   const s = document.getElementById("gShowBh");
   if (s) gradingDraft.showBehaviorToParents = s.checked;
   const inputs = document.querySelectorAll("[data-gpoints]");
@@ -814,6 +817,15 @@ function renderGradingView() {
     </div>
 
     <div class="box">
+      <h3>📚 طريقة حساب الواجبات (من ${d.hwMax})</h3>
+      <select id="gHwMode" style="padding:10px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit">
+        <option value="solved" ${d.hwMode !== "mastered" ? "selected" : ""}>من المواضيع المحلولة (يُحسب الواجب لكل موضوع أجاب الطالب على كل أسئلته، حتى لو لم يتقنها)</option>
+        <option value="mastered" ${d.hwMode === "mastered" ? "selected" : ""}>من المواضيع المتقنة فقط</option>
+      </select>
+      <div class="hintline" style="margin-top:6px">الاختبار يُحسب دائمًا من الإتقان. الواجبات توزَّع بالتساوي على المواضيع المحسوبة أدناه.</div>
+    </div>
+
+    <div class="box">
       <h3>📎 الأداء المهامي</h3>
       <input type="text" id="gTaskTitle" placeholder="عنوان المهمة الحالية (مثال: بحث عن دورة الماء)" value="${escapeAttr(d.currentTask.title || "")}"
         style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px;margin-bottom:8px">
@@ -827,7 +839,7 @@ function renderGradingView() {
     </div>
 
     <h2 class="section">📚 المواضيع المحسوبة بالدرجات (${d.scoredTopics.length})</h2>
-    <div class="hintline">الدرجة الافتراضية لكل موضوع = درجة الاختبار ÷ عدد المواضيع (${eq}). اكتب رقمًا لتغيير درجة موضوع معيّن. الواجبات توزَّع بالتساوي على نفس المواضيع.</div>
+    <div class="hintline">الدرجة الافتراضية لكل موضوع = درجة الاختبار ÷ عدد المواضيع (${eq}). اكتب رقمًا لتغيير درجة موضوع معيّن. الواجبات توزَّع بالتساوي على نفس المواضيع (حسب الطريقة المختارة أعلاه).</div>
     ${warn}
     <table><thead><tr><th>الموضوع (ضع ✓ ليُحسب)</th><th>درجته في الاختبار</th></tr></thead><tbody>${rows}</tbody></table>
 

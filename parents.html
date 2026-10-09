@@ -166,12 +166,14 @@ function recKey(cls, number) {
 
 function pill(status){
   if (status === "mastered") return '<span class="ok">🟢 متقن</span>';
-  if (status === "attempted") return '<span class="mid">🟡 حل ولم يتقن</span>';
+  if (status === "solved") return '<span class="mid">🟡 حل ولم يتقن</span>';
+  if (status === "started" || status === "attempted") return '<span class="mid">🟠 بدأ ولم يكمل</span>';
   return '<span class="low">🔴 لم يحل</span>';
 }
 function hwCell(t){
-  if (t.status === "mastered") return '<span class="ok">✅ تم</span>';
-  if (t.status === "attempted") return '<span class="mid">حل ولم يتقن</span>';
+  var done = (t.hwDone === undefined) ? (t.status === "mastered") : t.hwDone;
+  if (done) return '<span class="ok">✅ تم</span>';
+  if (t.status === "started" || t.status === "solved" || t.status === "attempted") return '<span class="mid">لم يكمل الواجب</span>';
   return '<span class="low">لم يحل الواجب</span>';
 }
 var BH = {"شغب":"😈 مشاغب","أدب":"🌟 مؤدب","نوم":"😴 النوم في الحصة","حديث":"🗣️ التحدث أثناء الدرس","أخرى":"📝 ملاحظة"};
