@@ -159,3 +159,103 @@ export function studentKey(decoded, fallbackClass) {
   if (decoded.studentNumber) return `${cls}#${decoded.studentNumber}`;
   return `${cls}#${decoded.name}`;
 }
+
+
+// ============================================================
+// ===== نظام الدرجات وملف الطالب وتقرير ولي الأمر =====
+// ============================================================
+export const TOPIC_TITLES = ["أسلوب العلم", "حل المشكلات بطريقة علمية", "المحاليل والذائبية (المادة النقية والمخاليط)", "المركبات الجزيئية (الروابط التساهمية والأيونية)", "الذائبية", "المحاليل (التشبع والتركيز)", "المحاليل الحمضية", "المحاليل القاعدية", "الرقم الهيدروجيني PH", "المادة وحالاتها", "الحرارة وتحولات المادة", "التغيرات بين الحالات الصلبة والسائلة والغازية", "سلوك الموائع (الضغط)", "التغير في ضغط الغاز", "الطفو والانغمار", "مبدأ باسكال", "الطاقة", "تحولات الطاقة", "توليد الطاقة الكهربائية", "الدم والدورة الدموية", "الجهاز الدوري والجهاز اللمفي", "المناعة والمرض", "الجهاز الهضمي والتغذية", "المواد الغذائية", "جهاز التنفس", "جهاز الإخراج", "المرض عبر التاريخ"];
+
+// رقم الطالب: يوحّد الأرقام العربية (١٨ -> 18) ويحذف المسافات والأصفار البادئة
+export function normalizeNumber(raw) {
+  if (raw === null || raw === undefined) return "";
+  const s = arabicIndicToWestern(String(raw)).replace(/\s+/g, "");
+  if (/^\d+$/.test(s)) return String(parseInt(s, 10));
+  return s;
+}
+
+// مفتاح سجل الطالب: الفصل الموحّد + رقمه (مثال: 2-6_18)
+export function recKey(cls, number) {
+  const c = canonicalizeClass(cls || "").replace(/\//g, "-");
+  return c + "_" + normalizeNumber(number);
+}
+
+// رمز ولي الأمر: 6 خانات بحروف وأرقام غير ملتبسة
+export function generatePin() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const arr = new Uint32Array(6);
+  (globalThis.crypto || window.crypto).getRandomValues(arr);
+  return Array.from(arr, n => alphabet[n % alphabet.length]).join("");
+}
+
+export const DEFAULT_GRADING = {
+  testMax: 10,        // درجة الاختبار
+  hwMax: 10,          // درجة الواجبات
+  partMax: 10,        // درجة المشاركة
+  taskMax: 20,        // درجة الأداء المهامي
+  scoredTopics: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // المواضيع المحسوبة بالدرجات
+  topicPoints: {},    // تعديل يدوي لدرجة كل موضوع (اختياري)
+  currentTask: { title: "", autoFullOnSubmit: true },
+  showBehaviorToParents: true
+};
+
+export function normalizeGrading(g) {
+  const d = JSON.parse(JSON.stringify(DEFAULT_GRADING));
+  const out = Object.assign(d, g || {});
+  out.currentTask = Object.assign({ title: "", autoFullOnSubmit: true }, (g && g.currentTask) || {});
+  out.topicPoints = (g && g.topicPoints) || {};
+  out.scoredTopics = ((g && g.scoredTopics) || DEFAULT_GRADING.scoredTopics).map(Number).sort((a, b) => a - b);
+  return out;
+}
+
+const r1 = n => Math.round(n * 100) / 100;
+
+// درجة موضوع في الاختبار: التعديل اليدوي إن وُجد، وإلا توزيع متساوٍ
+export function topicTestPoints(grading, i) {
+  const custom = grading.topicPoints[i];
+  if (custom !== undefined && custom !== null && custom !== "") return Number(custom) || 0;
+  const n = grading.scoredTopics.length;
+  return n ? r1(grading.testMax / n) : 0;
+}
+
+// يحسب تقرير الطالب كاملاً
+// mastered/attempted: مصفوفات أرقام مواضيع  |  record: سجل المعلم  |  taskDelivered: هل سلّم المهمة
+export function computeReport({ grading, mastered, attempted, record, taskDelivered }) {
+  const g = normalizeGrading(grading);
+  const M = new Set((mastered || []).map(Number));
+  const A = new Set((attempted || []).map(Number));
+  const rec = record || {};
+  const n = g.scoredTopics.length;
+  const hwShare = n ? r1(g.hwMax / n) : 0;
+
+  let testScore = 0, hwScore = 0, masteredCount = 0;
+  const topics = g.scoredTopics.map(i => {
+    const pts = topicTestPoints(g, i);
+    let status = "none";
+    if (M.has(i)) status = "mastered";
+    else if (A.has(i)) status = "attempted";
+    if (status === "mastered") { testScore += pts; hwScore += hwShare; masteredCount++; }
+    return { i, title: TOPIC_TITLES[i] || ("موضوع " + i), status, testPts: pts, hwPts: hwShare };
+  });
+  testScore = Math.min(r1(testScore), g.testMax);
+  hwScore = Math.min(r1(hwScore), g.hwMax);
+
+  const part = (rec.participation === undefined || rec.participation === null || rec.participation === "")
+    ? null : Math.min(Number(rec.participation) || 0, g.partMax);
+
+  let task = null, taskStatus = "لم يسلم";
+  if (rec.taskScore !== undefined && rec.taskScore !== null && rec.taskScore !== "") {
+    task = Math.min(Number(rec.taskScore) || 0, g.taskMax);
+    taskStatus = "تم التقييم";
+  } else if (taskDelivered) {
+    taskStatus = "تم التسليم";
+    if (g.currentTask.autoFullOnSubmit) task = g.taskMax;
+  }
+
+  const total = r1(testScore + hwScore + (part || 0) + (task || 0));
+  const max = g.testMax + g.hwMax + g.partMax + g.taskMax;
+  return {
+    topics, masteredCount, requiredCount: n,
+    scores: { testScore, testMax: g.testMax, hwScore, hwMax: g.hwMax, part, partMax: g.partMax, task, taskMax: g.taskMax, taskStatus, total, max }
+  };
+}

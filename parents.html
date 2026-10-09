@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>إشعار أولياء الأمور — مادة العلوم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{--brand:#0f6e6b;--brand-dark:#0a4e4c;--bg:#f3f7f6;--card:#fff;--line:#e1e8e7;--text:#12302f;--sub:#5b7573;--err:#b3261e;--ok:#1e7a4a;--warn:#9a6b00}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Tajawal',sans-serif;background:linear-gradient(180deg,#eaf4f2 0%,var(--bg) 220px);color:var(--text);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);min-height:100vh}
+  .wrap{max-width:640px;margin:0 auto;padding:26px 16px 60px}
+  .logo{width:56px;height:56px;border-radius:16px;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;margin:0 auto 12px;box-shadow:0 6px 16px rgba(15,110,107,.25)}
+  h1{font-size:21px;font-weight:900;text-align:center;margin:0 0 4px;color:var(--brand-dark)}
+  p.sub{text-align:center;color:var(--sub);margin:0 0 20px;font-size:14px;line-height:1.7}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 10px 30px rgba(15,60,58,.06)}
+  label{display:block;font-weight:700;font-size:14px;margin:0 0 6px}
+  .field{margin-bottom:14px}
+  input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:15px;background:#fbfdfd;color:var(--text)}
+  input:focus{outline:none;border-color:var(--brand)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  button{width:100%;border:none;border-radius:14px;padding:14px;font-family:inherit;font-size:16px;font-weight:900;color:#fff;background:var(--brand);cursor:pointer;-webkit-appearance:none;touch-action:manipulation}
+  button:disabled{background:#9db3b1}
+  .msg{margin-top:12px;padding:12px 14px;border-radius:12px;font-size:14px;font-weight:700;line-height:1.7;display:none}
+  .msg.err{background:#fdecea;color:var(--err);border:1px solid #f6cbc6;display:block}
+  .msg.info{background:#eef7f6;color:var(--brand-dark);border:1px solid #cde2df;display:block}
+  .hide{display:none!important}
+  .name{font-size:19px;font-weight:900;color:var(--brand-dark)}
+  .meta{font-size:13px;color:var(--sub);margin-top:2px}
+  .total{text-align:center;padding:16px}
+  .total .big{font-size:42px;font-weight:900;color:var(--brand)}
+  .total .of{font-size:18px;color:var(--sub);font-weight:700}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tile{border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+  .tile .t{font-size:12.5px;color:var(--sub);font-weight:700;margin-bottom:4px}
+  .tile .v{font-size:20px;font-weight:900}
+  .tile .s{font-size:12px;color:var(--sub);margin-top:2px}
+  h2{font-size:15.5px;font-weight:900;margin:0 0 10px;color:var(--brand-dark)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line)}
+  th{background:#eef5f4;font-weight:800;color:var(--brand-dark)}
+  tr:last-child td{border-bottom:none}
+  .scroll{overflow-x:auto}
+  .ok{color:var(--ok);font-weight:800}.mid{color:var(--warn);font-weight:800}.low{color:var(--err);font-weight:800}
+  footer{text-align:center;margin-top:20px;font-size:12px;color:#8ba3a1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">👨‍👩‍👦</div>
+  <h1>إشعار أولياء الأمور</h1>
+  <p class="sub">اكتب فصل ابنك ورقمه في الكشف ورمز الدخول الذي أرسله لك المعلم، لتشاهد مستواه ودرجاته.</p>
+
+  <div class="card" id="loginCard">
+    <div class="row2">
+      <div class="field"><label>الفصل</label><input type="text" id="cls" placeholder="مثال: 2/6 أو 6"></div>
+      <div class="field"><label>رقم الطالب في الكشف</label><input type="text" inputmode="numeric" id="num" placeholder="مثال: 18"></div>
+    </div>
+    <div class="field"><label>رمز ولي الأمر</label><input type="text" id="pin" placeholder="6 خانات" autocapitalize="characters" autocomplete="off" style="direction:ltr;text-align:left;letter-spacing:2px"></div>
+    <button type="button" id="goBtn" disabled>جاري التجهيز…</button>
+    <div id="msg" class="msg info">جاري تجهيز الاتصال…</div>
+  </div>
+
+  <div id="report" class="hide"></div>
+  <footer>هذه الصفحة تعرض بيانات الطالب لولي أمره فقط عبر رمز الدخول</footer>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+"use strict";
+var firebaseConfig = {
+  apiKey: "AIzaSyCx6sM4KaYXCXABxE9ieio_QhPDX-SP6xg",
+  authDomain: "manhaj-science1.firebaseapp.com",
+  projectId: "manhaj-science1",
+  storageBucket: "manhaj-science1.firebasestorage.app",
+  messagingSenderId: "275504808566",
+  appId: "1:275504808566:web:16d3951b587e2727c9d557"
+};
+var $ = function(id){ return document.getElementById(id); };
+var goBtn = $("goBtn"), msgEl = $("msg");
+function showMsg(t, type){ msgEl.textContent = t; msgEl.className = "msg " + (type || "info"); }
+function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+// ===== توحيد الفصل والرقم (نفس منطق لوحة المعلم) =====
+const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+const AR_NUMBER_WORDS = {
+  "صفر": "0",
+  "واحد": "1", "أول": "1", "الأول": "1",
+  "اثنان": "2", "اثنين": "2", "ثاني": "2", "الثاني": "2",
+  "ثلاثة": "3", "ثلاث": "3", "ثالث": "3", "الثالث": "3",
+  "أربعة": "4", "اربعة": "4", "أربع": "4", "اربع": "4", "رابع": "4", "الرابع": "4",
+  "خمسة": "5", "خمس": "5", "خامس": "5", "الخامس": "5",
+  "ستة": "6", "ست": "6", "سادس": "6", "السادس": "6",
+  "سبعة": "7", "سبع": "7", "سابع": "7", "السابع": "7",
+  "ثمانية": "8", "ثماني": "8", "تمانية": "8", "ثامن": "8", "الثامن": "8",
+  "تسعة": "9", "تسع": "9", "تاسع": "9", "التاسع": "9",
+  "عشرة": "10", "عشر": "10", "عاشر": "10", "العاشر": "10"
+};
+
+function arabicIndicToWestern(s) {
+  return s.replace(/[٠-٩]/g, d => String(AR_DIGITS.indexOf(d)));
+}
+
+// صيغة "ه" العامية بدل "ة" شائعة جدًا (سته، ثلاثه، خمسه...) — نضيفها تلقائيًا
+Object.keys(AR_NUMBER_WORDS).forEach(w => {
+  if (w.endsWith("ة")) AR_NUMBER_WORDS[w.slice(0, -1) + "ه"] = AR_NUMBER_WORDS[w];
+});
+
+function normalizeClassToken(tok) {
+  const t = tok.trim();
+  if (!t) return "";
+  if (AR_NUMBER_WORDS[t]) return AR_NUMBER_WORDS[t];
+  // وحّد أشكال الألف (أ/إ/آ) لحرف الشعبة حتى يتطابق "أ" المكتوبة بأي شكل
+  return t.replace(/^[أإآ]$/u, "ا");
+}
+
+// هذا التطبيق خاص بصف واحد ثابت (الثاني متوسط) — فكل الطلاب "صفهم" نفس الرقم،
+// والرقم/الحرف المختلف هو رقم الشعبة الحقيقي. هذا يحل مشكلة الترتيب المعكوس:
+// إذا كتب الطالب "2/6" أو "6/2" نعرف مسبقًا أن "2" هو الصف الثابت، فنعيد ترتيبها
+// دائمًا بنفس الشكل القياسي "2/6" بغض النظر عن ترتيب الكتابة.
+const FIXED_GRADE = "2";
+
+function canonicalizeClass(raw) {
+  if (!raw) return "";
+  let s = arabicIndicToWestern(String(raw).trim());
+  if (!s) return "";
+  // كل الفواصل المحتملة (- أو فاصلة أو مسافات) تتحول لـ "/" واحد موحّد
+  s = s.replace(/[\u060C\-]+/g, "/");
+  s = s.replace(/\s*\/\s*/g, "/");
+  s = s.replace(/\s+/g, "/");
+  s = s.replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
+  const parts = s.split("/").map(normalizeClassToken).filter(Boolean);
+
+  if (parts.length === 1) {
+    // رقم/حرف واحد بس = رقم الشعبة؛ الصف الثابت يُضاف تلقائيًا
+    return parts[0] === FIXED_GRADE ? parts[0] : FIXED_GRADE + "/" + parts[0];
+  }
+
+  if (parts.length === 2) {
+    const [a, b] = parts;
+    if (a === FIXED_GRADE && b !== FIXED_GRADE) return FIXED_GRADE + "/" + b;
+    if (b === FIXED_GRADE && a !== FIXED_GRADE) return FIXED_GRADE + "/" + a;
+    // ما فيه "2" واضح بالطرفين (حالة نادرة) — رتّبها كما كُتبت بدون تخمين
+    return parts.join("/");
+  }
+
+  return parts.join("/");
+}
+
+
+function normalizeNumber(raw) {
+  if (raw === null || raw === undefined) return "";
+  const s = arabicIndicToWestern(String(raw)).replace(/\s+/g, "");
+  if (/^\d+$/.test(s)) return String(parseInt(s, 10));
+  return s;
+}
+
+function recKey(cls, number) {
+  const c = canonicalizeClass(cls || "").replace(/\//g, "-");
+  return c + "_" + normalizeNumber(number);
+}
+
+
+function pill(status){
+  if (status === "mastered") return '<span class="ok">🟢 متقن</span>';
+  if (status === "attempted") return '<span class="mid">🟡 حل ولم يتقن</span>';
+  return '<span class="low">🔴 لم يحل</span>';
+}
+function hwCell(t){
+  if (t.status === "mastered") return '<span class="ok">✅ تم</span>';
+  if (t.status === "attempted") return '<span class="mid">حل ولم يتقن</span>';
+  return '<span class="low">لم يحل الواجب</span>';
+}
+var BH = {"شغب":"😈 مشاغب","أدب":"🌟 مؤدب","نوم":"😴 النوم في الحصة","حديث":"🗣️ التحدث أثناء الدرس","أخرى":"📝 ملاحظة"};
+
+function render(r){
+  var s = r.scores, d = r.updatedAt ? new Date(r.updatedAt).toLocaleDateString("ar-SA") : "";
+  var h = '<div class="card"><div class="name">' + esc(r.name) + '</div>' +
+    '<div class="meta">الفصل ' + esc(r.cls) + ' · رقم ' + esc(r.number) + (d ? ' · آخر تحديث: ' + esc(d) : '') + '</div></div>';
+
+  h += '<div class="card total"><div class="meta">⭐ الدرجة الحالية</div><div><span class="big">' + s.total + '</span> <span class="of">/ ' + s.max + '</span></div></div>';
+
+  h += '<div class="card"><div class="grid">' +
+    '<div class="tile"><div class="t">📝 الاختبارات</div><div class="v">' + s.testScore + ' / ' + s.testMax + '</div><div class="s">من إتقان الأبواب</div></div>' +
+    '<div class="tile"><div class="t">📚 الواجبات</div><div class="v">' + s.hwScore + ' / ' + s.hwMax + '</div><div class="s">من إتقان الأبواب</div></div>' +
+    '<div class="tile"><div class="t">🧑‍🏫 المشاركة</div><div class="v">' + (s.part == null ? "—" : s.part) + ' / ' + s.partMax + '</div><div class="s">' + (s.part == null ? "لم تُسجَّل بعد" : "") + '</div></div>' +
+    '<div class="tile"><div class="t">📎 الأداء المهامي</div><div class="v">' + (s.task == null ? "—" : s.task) + ' / ' + s.taskMax + '</div><div class="s">' + esc(s.taskStatus) + (r.taskTitle ? ' · ' + esc(r.taskTitle) : '') + '</div></div>' +
+    '</div></div>';
+
+  h += '<div class="card"><h2>🎯 إتقان الأبواب المطلوبة (' + r.masteredCount + ' من ' + r.requiredCount + ')</h2><div class="scroll"><table><thead><tr><th>الباب</th><th>الحالة</th><th>الواجب</th></tr></thead><tbody>';
+  r.topics.forEach(function(t){ h += '<tr><td>' + esc(t.title) + '</td><td>' + pill(t.status) + '</td><td>' + hwCell(t) + '</td></tr>'; });
+  h += '</tbody></table></div></div>';
+
+  if (r.showBehavior) {
+    var b = (r.behaviors || []).slice().sort(function(x,y){ return (y.date||"").localeCompare(x.date||""); });
+    h += '<div class="card"><h2>📋 السلوك والملاحظات</h2>';
+    if (!b.length) h += '<div class="meta">لا توجد ملاحظات مسجّلة.</div>';
+    else {
+      h += '<div class="scroll"><table><thead><tr><th>التاريخ</th><th>الحصة</th><th>النوع</th><th>الملاحظة</th></tr></thead><tbody>';
+      b.forEach(function(x){ h += '<tr><td>' + esc(x.date) + '</td><td>' + (x.period ? 'الحصة ' + esc(x.period) : '—') + '</td><td>' + esc(BH[x.type] || x.type) + '</td><td>' + esc(x.note || '') + '</td></tr>'; });
+      h += '</tbody></table></div>';
+    }
+    h += '</div>';
+  }
+  $("report").innerHTML = h;
+  $("report").className = "";
+}
+
+function ready(){
+  goBtn.disabled = false; goBtn.textContent = "عرض بيانات الطالب"; msgEl.className = "msg";
+  try {
+    var saved = JSON.parse(localStorage.getItem("manhaj_parent_v1") || "null");
+    if (saved) { $("cls").value = saved.c || ""; $("num").value = saved.n || ""; $("pin").value = saved.p || ""; }
+  } catch(e){}
+}
+
+var db = null;
+var watchdog = setTimeout(function(){
+  if (!db) { goBtn.disabled = true; goBtn.textContent = "تعذّر الاتصال"; showMsg("تعذّر تجهيز الصفحة. جرّب متصفحًا آخر (Safari أو Chrome) أو شبكة إنترنت أخرى.", "err"); }
+}, 8000);
+
+try {
+  if (!window.firebase || !firebase.firestore) throw new Error("no sdk");
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  clearTimeout(watchdog);
+  ready();
+} catch (e) {
+  showMsg("تعذّر تشغيل الصفحة في هذا المتصفح. جرّب Safari أو Chrome.", "err");
+}
+
+goBtn.addEventListener("click", function(){
+  var cls = $("cls").value.trim(), num = $("num").value.trim(), pin = $("pin").value.trim().toUpperCase().replace(/\s+/g, "");
+  if (!cls || !num || !pin) { showMsg("أكمل الفصل ورقم الطالب والرمز.", "err"); return; }
+  var key = recKey(cls, num) + "_" + pin;
+  goBtn.disabled = true; goBtn.textContent = "جارٍ البحث…"; showMsg("جارٍ جلب البيانات…", "info");
+  $("report").className = "hide";
+  db.collection("parent_reports").doc(key).get().then(function(doc){
+    if (!doc.exists) { showMsg("البيانات غير صحيحة، أو لم ينشر المعلم تقرير هذا الطالب بعد. تأكد من الفصل والرقم والرمز.", "err"); return; }
+    try { localStorage.setItem("manhaj_parent_v1", JSON.stringify({c: cls, n: num, p: pin})); } catch(e){}
+    msgEl.className = "msg";
+    render(doc.data());
+  }).catch(function(err){
+    console.error(err);
+    showMsg("تعذّر الاتصال. تأكد من الإنترنت وحاول مرة أخرى.", "err");
+  }).then(function(){ goBtn.disabled = false; goBtn.textContent = "عرض بيانات الطالب"; });
+});
+})();
+</script>
+</body>
+</html>
