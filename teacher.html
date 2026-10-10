@@ -946,16 +946,15 @@ function currEnabled(i, mode){
   const c = curriculumDraft || DEFAULT_APP_SETTINGS;
   const disabled = mode === 'exam' ? (c.examDisabledTopics||[]) : (c.practiceDisabledTopics||[]);
   if(disabled.includes(i)) return false;
-  if(c.monthlyPlan?.locked && c.monthlyPlan.topics?.length) return c.monthlyPlan.topics.includes(i);
+  // المطلوب الآن لا يقيّد إتاحة التدريب أو الاختبار.
   return true;
 }
 async function renderCurriculumView(){
   try { if(!curriculumDraft) await loadAppSettingsDraft(); } catch(e){ content.innerHTML='<div class="empty">تعذّر تحميل إعدادات المنهج.</div>'; return; }
   const c=curriculumDraft, plan=new Set(c.monthlyPlan.topics||[]);
   const rows=TOPIC_TITLES.map((t,i)=>`<tr><td>${escapeHtml(t)}</td><td><input type="checkbox" data-curr-pr="${i}" ${(c.practiceDisabledTopics||[]).includes(i)?'':'checked'}></td><td><input type="checkbox" data-curr-ex="${i}" ${(c.examDisabledTopics||[]).includes(i)?'':'checked'}></td><td><input type="checkbox" data-curr-plan="${i}" ${plan.has(i)?'checked':''}></td></tr>`).join('');
-  content.innerHTML=`<div class="box"><h2 class="section">📚 خطة المنهج والتحكم المركزي</h2><div class="hintline">التدريب والاختبار مستقلان. عند تفعيل قفل الخطة، لا يستطيع الطالب بدء موضوع خارج المواضيع المحددة.</div>
+  content.innerHTML=`<div class="box"><h2 class="section">📚 خطة المنهج والتحكم المركزي</h2><div class="hintline">التدريب والاختبار والمطلوب الآن قوائم مستقلة.</div>
     <div class="rowbtns"><label>اسم الخطة <input id="cvLabel" value="${escapeAttr(c.monthlyPlan.label||'')}" style="padding:8px;border:1px solid var(--line);border-radius:9px"></label>
-    <label><input id="cvLock" type="checkbox" ${c.monthlyPlan.locked!==false?'checked':''}> 🔒 قفل الخطة</label>
     <label><input id="cvPracticeOnly" type="checkbox" ${c.practiceOnlyMode?'checked':''}> تدريب فقط</label></div>
     <table><thead><tr><th>الموضوع</th><th>🧠 تدريب</th><th>📝 اختبار</th><th>📅 مطلوب الآن</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="box" style="margin-top:14px"><h3>📢 الإعلان</h3><textarea id="cvAnn" rows="2" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:9px">${escapeHtml(c.announcement||'')}</textarea></div>
@@ -966,7 +965,7 @@ async function saveCurriculum(){
   const c=curriculumDraft;
   c.settingsVersion=3;
   c.monthlyPlan.label=document.getElementById('cvLabel').value.trim();
-  c.monthlyPlan.locked=document.getElementById('cvLock').checked;
+  c.monthlyPlan.locked=false; // للتوافق مع الإعدادات القديمة فقط
   c.practiceOnlyMode=document.getElementById('cvPracticeOnly').checked;
   c.announcement=document.getElementById('cvAnn').value.trim();
   c.practiceDisabledTopics=[]; c.examDisabledTopics=[]; c.monthlyPlan.topics=[];
