@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
 <style>
   :root{
     --brand:#0f6e6b; --brand-dark:#0a4e4c;
@@ -167,6 +168,8 @@
       <button class="pillbtn" data-view="reports">📤 التقارير</button>
       <button class="pillbtn" data-view="files">🎓 ملفات الطلاب والدرجات</button>
       <button class="pillbtn" data-view="grading">⚙️ توزيع الدرجات</button>
+      <button class="pillbtn" data-view="curriculum">📚 خطة المنهج</button>
+      <button class="pillbtn" data-view="parents">👨‍👩‍👦 إشعار الأولياء</button>
     </div>
 
     <!-- فلاتر -->
@@ -265,7 +268,12 @@ async function loadExtraData() {
   } catch (e) { console.error("records", e); }
   try {
     const g = await getDoc(doc(db, "app_config", "grading"));
-    grading = normalizeGrading(g.exists() ? g.data() : null);
+    const rawG = g.exists() ? g.data() : null;
+    grading = normalizeGrading(rawG);
+    if (!rawG || Number(rawG.schemaVersion || 0) < 2) {
+      // ترحيل النسخة القديمة إلى التوزيع المطلوب: 10 اختبار + 10 واجب + 10 مشاركة + 20 أداء مهامي
+      await setDoc(doc(db, "app_config", "grading"), grading);
+    }
   } catch (e) { console.error("grading", e); }
   try {
     const ts = await getDocs(query(collection(db, "task_submissions"), orderBy("createdAt", "desc")));
@@ -420,6 +428,8 @@ function render() {
   if (state.view === "reports") { renderReportsView(); return; }
   if (state.view === "files") { renderFilesView(); return; }
   if (state.view === "grading") { renderGradingView(); return; }
+  if (state.view === "curriculum") { renderCurriculumView(); return; }
+  if (state.view === "parents") { renderParentsView(); return; }
   renderAllView(); // "all" و "masteredOnly" يشتركان بنفس شكل الجدولين
 }
 
@@ -489,6 +499,7 @@ function reportPayload(st, rec) {
   const rep = studentReport(st);
   return {
     name: st.name, cls: st.cls, number: st.number,
+    parentPin: rec.parentPin || "",
     updatedAt: Date.now(),
     masteredCount: rep.masteredCount, requiredCount: rep.requiredCount,
     topics: rep.topics, scores: rep.scores,
@@ -531,7 +542,10 @@ async function publishAll() {
   flash("✅ تم نشر تقارير " + list.length + " طالب لأولياء الأمور.", true);
 }
 
-function parentLink() { return new URL("parents.html", location.href).href; }
+function parentLink() {
+  // حل نسبي لمجلد الصفحة نفسها، حتى يعمل على GitHub Pages داخل مستودع فرعي.
+  return new URL("./parents.html", window.location.href).href;
+}
 
 function parentMessage(st, rec) {
   return `السلام عليكم ولي أمر الطالب ${st.name}\nلمتابعة درجات ومستوى ابنكم في مادة العلوم افتحوا الرابط:\n${parentLink()}\nالفصل: ${st.cls}\nرقم الطالب: ${st.number}\nرمز الدخول: ${rec.parentPin}`;
@@ -595,6 +609,8 @@ function renderFilesView() {
       <div class="rowbtns no-print" style="margin:6px 0 12px">
         <button class="pillbtn primary" data-act="publishAll">📤 نشر/تحديث تقارير كل أولياء الأمور</button>
         <button class="pillbtn" data-act="showCodes">📋 تصدير رموز الأولياء</button>
+        <button class="pillbtn" data-act="importRoster">📥 استيراد أسماء دفعة واحدة</button>
+        <button class="pillbtn" data-act="bulkGrade">✍️ إدخال درجة جماعية</button>
         <button class="pillbtn" data-act="addStudent">➕ إضافة طالب يدويًا</button>
       </div>
       <div id="filesMsg" class="msg-inline" style="display:none"></div>
@@ -635,8 +651,8 @@ function renderStudentDetail(key) {
           <button class="pillbtn danger small" data-act="delBh" data-id="${escapeAttr(b.id)}">🗑️</button></td></tr>`).join("");
 
   const safeLink = u => /^https?:\/\//i.test(u || "") ? `<a href="${escapeAttr(u)}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>` : escapeHtml(u || "—");
-  const subRows = subs.map(t => `<tr><td>${escapeHtml(t.taskTitle)}</td><td>${safeLink(t.link)}</td><td>${escapeHtml(t.note || "")}</td>
-      <td>${t.createdAt && t.createdAt.toDate ? t.createdAt.toDate().toLocaleDateString("ar-SA") : ""}</td></tr>`).join("");
+  const subRows = subs.map(t => `<tr><td>${escapeHtml(t.taskTitle)}</td><td>${t.fileUrl ? `<a href="${escapeAttr(t.fileUrl)}" target="_blank" rel="noopener noreferrer">📎 ${escapeHtml(t.fileName || "فتح الملف")}</a>` : safeLink(t.link)}</td><td>${escapeHtml(t.note || "")}</td>
+      <td>${t.createdAt && t.createdAt.toDate ? t.createdAt.toDate().toLocaleDateString("ar-SA") : ""}</td><td class="no-print"><button class="pillbtn danger small" data-act="delTask" data-id="${escapeAttr(t.id)}">🗑️</button></td></tr>`).join("");
 
   const pin = rec.parentPin
     ? `<b style="font-size:16px;letter-spacing:2px">${escapeHtml(rec.parentPin)}</b>
@@ -674,7 +690,7 @@ function renderStudentDetail(key) {
       <div class="box no-print">
         <h3>📎 الأداء المهامي (من ${sc.taskMax})${grading.currentTask.title ? " — المهمة: " + escapeHtml(grading.currentTask.title) : ""}</h3>
         <div class="hintline">الحالة: ${escapeHtml(sc.taskStatus)}${grading.currentTask.autoFullOnSubmit ? " (التسليم يمنح الدرجة كاملة تلقائيًا ما لم تسجّل درجة يدويًا)" : ""}</div>
-        ${subs.length ? `<table style="margin-bottom:10px"><thead><tr><th>المهمة</th><th>الرابط</th><th>ملاحظة الطالب</th><th>التاريخ</th></tr></thead><tbody>${subRows}</tbody></table>` : `<div class="hintline">لم يسلّم الطالب المهمة عبر التطبيق.</div>`}
+        ${subs.length ? `<table style="margin-bottom:10px"><thead><tr><th>المهمة</th><th>الرابط/الملف</th><th>ملاحظة الطالب</th><th>التاريخ</th><th></th></tr></thead><tbody>${subRows}</tbody></table>` : `<div class="hintline">لم يسلّم الطالب المهمة عبر التطبيق.</div>`}
         <input type="number" id="taskInput" min="0" max="${sc.taskMax}" step="0.5" value="${rec.taskScore ?? ""}" style="width:90px;padding:8px;border:1.5px solid var(--line);border-radius:10px">
         <button class="pillbtn primary" data-act="saveTask">تسجيل الدرجة يدويًا</button>
         <button class="pillbtn" data-act="clearTask">إلغاء التقييم اليدوي</button>
@@ -725,6 +741,8 @@ async function viewClick(e) {
       return;
     }
     if (act === "addStudent") { await addStudentManually(); return; }
+    if (act === "importRoster") { await importRosterBulk(); return; }
+    if (act === "bulkGrade") { await bulkGradeStudents(); return; }
     if (act === "saveGrading") { await saveGrading(); return; }
     if (act === "equalSplit") { syncGradingDraft(); gradingDraft.topicPoints = {}; render(); return; }
     if (act === "resetDraft") { gradingDraft = null; render(); return; }
@@ -736,6 +754,14 @@ async function viewClick(e) {
       if (await saveRecord(st, { participation: Number(v) })) { await publishIfPublished(st); render(); }
     } else if (act === "clearPart") {
       if (await saveRecord(st, { participation: null })) { await publishIfPublished(st); render(); }
+    } else if (act === "delTask") {
+      if (!confirm("حذف تسليم هذه المهمة نهائيًا؟")) return;
+      const sub = taskSubs.find(x => x.id === b.dataset.id);
+      if (sub?.fileUrl && window.firebase?.storage) { try { await firebase.storage().refFromURL(sub.fileUrl).delete(); } catch(e) { console.warn("storage delete", e); } }
+      await deleteDoc(doc(db, "task_submissions", b.dataset.id));
+      taskSubs = taskSubs.filter(x => x.id !== b.dataset.id);
+      await publishIfPublished(st);
+      render();
     } else if (act === "saveTask") {
       const v = document.getElementById("taskInput").value;
       if (v === "" || isNaN(Number(v)) || Number(v) < 0 || Number(v) > grading.taskMax) { flash("أدخل درجة بين 0 و " + grading.taskMax, false); return; }
@@ -807,6 +833,149 @@ async function addStudentManually() {
   flash("✅ تمت إضافة الطالب.", true);
 }
 
+// ---------------- استيراد كشف الطلاب وإدخال الدرجات دفعة واحدة ----------------
+async function importRosterBulk() {
+  const raw = prompt("الصق كشف الطلاب، طالب في كل سطر بهذا الترتيب:\\nالفصل، رقم الطالب، اسم الطالب\\nمثال: 3، 12، أحمد محمد\\nيمكن استخدام الفاصلة أو علامة التبويب أو | للفصل بين الأعمدة.");
+  if (raw === null || !raw.trim()) return;
+  const lines = raw.split(/\\r?\\n/).map(x => x.trim()).filter(Boolean);
+  const parsed = [], errors = [];
+  lines.forEach((line, i) => {
+    const cols = line.includes("\\t") ? line.split("\\t") : line.includes("|") ? line.split("|") : line.split(/[،,]/);
+    if (cols.length < 3) { errors.push(i + 1); return; }
+    const cls = canonicalizeClass(cols[0]) || String(cols[0] || "").trim();
+    const number = normalizeNumber(cols[1]);
+    const name = cols.slice(2).join(" ").trim();
+    if (!cls || !number || !name || /^(الفصل|class)$/i.test(cls) || /^(الرقم|رقم الطالب|number)$/i.test(number)) return;
+    parsed.push({ cls, number, name });
+  });
+  if (!parsed.length) { alert("لم أجد صفوفًا صالحة. تأكد من ترتيب الأعمدة: الفصل، رقم الطالب، اسم الطالب."); return; }
+  const seen = new Set(), unique = [];
+  for (const st of parsed) {
+    const rk = recKey(st.cls, st.number);
+    if (seen.has(rk)) continue;
+    seen.add(rk); unique.push({ ...st, rk });
+  }
+  if (!confirm(`سيتم استيراد/تحديث ${unique.length} طالبًا. إذا كان الطالب موجودًا، ستبقى درجاته ورموزه محفوظة ويُحدّث الاسم فقط. متابعة؟`)) return;
+  let count = 0;
+  for (let i = 0; i < unique.length; i += 400) {
+    const batch = writeBatch(db);
+    unique.slice(i, i + 400).forEach(st => {
+      const old = records[st.rk] || {};
+      const rec = { ...old, name: st.name, cls: st.cls, number: st.number, updatedAt: Date.now() };
+      batch.set(doc(db, "student_records", st.rk), rec);
+      records[st.rk] = rec;
+      count++;
+    });
+    await batch.commit();
+  }
+  rebuildAndRender();
+  flash(`✅ تم استيراد ${count} طالبًا. يمكنك الآن مراجعة الكشف وتصدير رموز الأولياء.`, true);
+}
+
+async function bulkGradeStudents() {
+  const classInput = prompt("اكتب الفصل كما يظهر في القائمة (مثال: 3 أو أ):");
+  if (classInput === null || !classInput.trim()) return;
+  const cls = canonicalizeClass(classInput) || classInput.trim();
+  const category = prompt("أي درجة تريد تطبيقها على الفصل؟ اكتب: مشاركة أو أداء مهامي.\\nملاحظة: الاختبار والواجب محسوبان حاليًا من إتقان الموضوع.");
+  if (category === null) return;
+  const field = /^(مشاركة|المشاركة|part|participation)$/i.test(category.trim()) ? "participation"
+    : /^(أداء مهامي|الاداء المهامي|الأداء المهامي|مهمة|task|taskscore)$/i.test(category.trim()) ? "taskScore" : "";
+  if (!field) { alert("اختر «مشاركة» أو «أداء مهامي» فقط؛ الاختبار والواجب محسوبان من إتقان الموضوع في النظام الحالي."); return; }
+  const max = field === "participation" ? grading.partMax : grading.taskMax;
+  const valueRaw = prompt(`أدخل الدرجة من 0 إلى ${max}. ستُطبّق على جميع طلاب الفصل ${cls}.`);
+  if (valueRaw === null || valueRaw.trim() === "") return;
+  const value = Number(valueRaw);
+  if (!Number.isFinite(value) || value < 0 || value > max) { alert(`أدخل رقمًا من 0 إلى ${max}.`); return; }
+  const students = Object.values(studentsIndex).filter(st => st.number && st.cls === cls);
+  if (!students.length) { alert(`لم أجد طلابًا بأرقام في الفصل ${cls}.`); return; }
+  if (!confirm(`تأكيد: تسجيل ${value}/${max} في ${category} لعدد ${students.length} طالبًا في الفصل ${cls}؟ ستُستبدل الدرجة السابقة لهذا البند.`)) return;
+  for (let i = 0; i < students.length; i += 400) {
+    const batch = writeBatch(db);
+    students.slice(i, i + 400).forEach(st => {
+      const rk = studentRecKey(st), old = records[rk] || {};
+      const rec = { ...old, [field]: value, name: old.name || st.name, cls: st.cls, number: st.number, updatedAt: Date.now() };
+      batch.set(doc(db, "student_records", rk), rec);
+      records[rk] = rec;
+    });
+    await batch.commit();
+  }
+  // تحديث التقارير المنشورة مسبقًا فقط، من دون إنشاء رموز جديدة للطلاب غير المنشورين.
+  for (const st of students) {
+    const rec = records[studentRecKey(st)];
+    if (rec && rec.parentPin) {
+      await setDoc(doc(db, "parent_reports", studentRecKey(st) + "_" + rec.parentPin), reportPayload(st, rec));
+    }
+  }
+  rebuildAndRender();
+  flash(`✅ تم تسجيل الدرجة لـ ${students.length} طالبًا في الفصل ${cls}.`, true);
+}
+
+// ---------------- 👨‍👩‍👦 إشعار الأولياء ----------------
+function renderParentsView(){
+  const students = getFilteredStudents().filter(st => st.number).sort((a,b)=>a.cls.localeCompare(b.cls,'ar',{numeric:true}) || (Number(a.number)||9999)-(Number(b.number)||9999));
+  const rows = students.map(st=>{
+    const rec=records[studentRecKey(st)]||{};
+    const pin=rec.parentPin||'—';
+    return `<tr><td>${escapeHtml(st.number||'—')}</td><td>${escapeHtml(st.name)}</td><td>${escapeHtml(st.cls)}</td><td><b style="letter-spacing:2px">${escapeHtml(pin)}</b></td><td>${rec.parentPin?'<span class="pill good">منشور</span>':'<span class="pill mid">غير منشور</span>'}</td><td class="no-print"><button class="pillbtn primary small" data-act="parentPublish" data-key="${escapeAttr(st.key)}">${rec.parentPin?'🔄 تحديث':'📤 نشر'}</button> <button class="pillbtn small" data-act="parentCopy" data-key="${escapeAttr(st.key)}">📋 رسالة</button></td></tr>`;
+  }).join('');
+  content.innerHTML=`<div class="box"><h2 class="section">👨‍👩‍👦 إشعار الأولياء</h2><div class="hintline">لكل طالب رمز خاص. لا يُعرض التقرير إلا عند إدخال الفصل + رقم الطالب + الرمز.</div><table><thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>رمز ولي الأمر</th><th>الحالة</th><th class="no-print">إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">لا يوجد طلاب بأرقام.</td></tr>'}</tbody></table></div>`;
+  content.onclick=async e=>{
+    const b=e.target.closest('[data-act]'); if(!b)return; const st=studentsIndex[b.dataset.key]; if(!st)return; const act=b.dataset.act;
+    if(act==='parentPublish'){ if(await publishStudent(st)){ render(); flash('✅ تم نشر/تحديث تقرير '+st.name,true); } }
+    if(act==='parentCopy'){ const rec=records[studentRecKey(st)]; if(!rec?.parentPin) { await publishStudent(st); } const msg=parentMessage(st,records[studentRecKey(st)]); if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(msg); else prompt('انسخ الرسالة:',msg); flash('تم نسخ رسالة ولي الأمر ✅',true); }
+  };
+}
+
+// ---------------- 📚 خطة المنهج والتحكم المركزي ----------------
+let curriculumDraft = null;
+const ADMIN_EMAIL = "mohfox2@hotmail.com";
+const DEFAULT_APP_SETTINGS = {
+  settingsVersion: 3, practiceDisabledTopics: [], examDisabledTopics: [], practiceOnlyMode: false,
+  announcement: "", subjectName: "مدرّب منهج العلوم", gradeLabel: "الصف الثاني المتوسط",
+  teacherName: "", termLabel: "", monthlyPlan: {label:"", topics:[], locked:true}, classes: []
+};
+async function loadAppSettingsDraft(){
+  const d = await getDoc(doc(db, "app_config", "settings"));
+  const x = d.exists() ? d.data() : {};
+  curriculumDraft = Object.assign({}, DEFAULT_APP_SETTINGS, x);
+  curriculumDraft.monthlyPlan = Object.assign({label:"",topics:[],locked:true}, x.monthlyPlan || {});
+  curriculumDraft.monthlyPlan.topics = [...new Set((curriculumDraft.monthlyPlan.topics || []).map(Number).filter(i=>i>=0 && i<TOPIC_TITLES.length))];
+  return curriculumDraft;
+}
+function currEnabled(i, mode){
+  const c = curriculumDraft || DEFAULT_APP_SETTINGS;
+  const disabled = mode === 'exam' ? (c.examDisabledTopics||[]) : (c.practiceDisabledTopics||[]);
+  if(disabled.includes(i)) return false;
+  if(c.monthlyPlan?.locked && c.monthlyPlan.topics?.length) return c.monthlyPlan.topics.includes(i);
+  return true;
+}
+async function renderCurriculumView(){
+  try { if(!curriculumDraft) await loadAppSettingsDraft(); } catch(e){ content.innerHTML='<div class="empty">تعذّر تحميل إعدادات المنهج.</div>'; return; }
+  const c=curriculumDraft, plan=new Set(c.monthlyPlan.topics||[]);
+  const rows=TOPIC_TITLES.map((t,i)=>`<tr><td>${escapeHtml(t)}</td><td><input type="checkbox" data-curr-pr="${i}" ${(c.practiceDisabledTopics||[]).includes(i)?'':'checked'}></td><td><input type="checkbox" data-curr-ex="${i}" ${(c.examDisabledTopics||[]).includes(i)?'':'checked'}></td><td><input type="checkbox" data-curr-plan="${i}" ${plan.has(i)?'checked':''}></td></tr>`).join('');
+  content.innerHTML=`<div class="box"><h2 class="section">📚 خطة المنهج والتحكم المركزي</h2><div class="hintline">التدريب والاختبار مستقلان. عند تفعيل قفل الخطة، لا يستطيع الطالب بدء موضوع خارج المواضيع المحددة.</div>
+    <div class="rowbtns"><label>اسم الخطة <input id="cvLabel" value="${escapeAttr(c.monthlyPlan.label||'')}" style="padding:8px;border:1px solid var(--line);border-radius:9px"></label>
+    <label><input id="cvLock" type="checkbox" ${c.monthlyPlan.locked!==false?'checked':''}> 🔒 قفل الخطة</label>
+    <label><input id="cvPracticeOnly" type="checkbox" ${c.practiceOnlyMode?'checked':''}> تدريب فقط</label></div>
+    <table><thead><tr><th>الموضوع</th><th>🧠 تدريب</th><th>📝 اختبار</th><th>📅 مطلوب الآن</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="box" style="margin-top:14px"><h3>📢 الإعلان</h3><textarea id="cvAnn" rows="2" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:9px">${escapeHtml(c.announcement||'')}</textarea></div>
+    <button class="pillbtn primary" id="saveCurr">💾 حفظ خطة المنهج والإعدادات</button><div id="currMsg" class="msg-inline"></div></div>`;
+  content.querySelector('#saveCurr').onclick=saveCurriculum;
+}
+async function saveCurriculum(){
+  const c=curriculumDraft;
+  c.settingsVersion=3;
+  c.monthlyPlan.label=document.getElementById('cvLabel').value.trim();
+  c.monthlyPlan.locked=document.getElementById('cvLock').checked;
+  c.practiceOnlyMode=document.getElementById('cvPracticeOnly').checked;
+  c.announcement=document.getElementById('cvAnn').value.trim();
+  c.practiceDisabledTopics=[]; c.examDisabledTopics=[]; c.monthlyPlan.topics=[];
+  TOPIC_TITLES.forEach((_,i)=>{ if(!document.querySelector(`[data-curr-pr="${i}"]`).checked)c.practiceDisabledTopics.push(i); if(!document.querySelector(`[data-curr-ex="${i}"]`).checked)c.examDisabledTopics.push(i); if(document.querySelector(`[data-curr-plan="${i}"]`).checked)c.monthlyPlan.topics.push(i); });
+  const msg=document.getElementById('currMsg'); msg.textContent='جارٍ الحفظ…'; msg.className='msg-inline';
+  try{ await setDoc(doc(db,'app_config','settings'),{...c,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); msg.textContent='✅ تم الحفظ وتطبيق الخطة مركزيًا على جميع الطلاب.'; msg.className='msg-inline ok'; }
+  catch(e){ console.error(e); msg.textContent='تعذّر الحفظ. تأكد من صلاحيات Firestore.'; msg.className='msg-inline err'; }
+}
+
 // ---------------- ⚙️ توزيع الدرجات ----------------
 function syncGradingDraft() {
   if (!gradingDraft) return;
@@ -854,7 +1023,7 @@ function renderGradingView() {
 
   content.innerHTML = `
     <div class="box">
-      <h3>⚙️ توزيع الدرجات (المجموع الكلي ${d.testMax + d.hwMax + d.partMax + d.taskMax})</h3>
+      <h3>⚙️ توزيع الدرجات (الافتراضي: 10 اختبار + 10 واجب + 10 مشاركة + 20 أداء = 50)</h3>
       <div class="rowbtns" style="gap:14px">
         ${numIn("gTest", "الاختبارات", d.testMax)}${numIn("gHw", "الواجبات", d.hwMax)}
         ${numIn("gPart", "المشاركة", d.partMax)}${numIn("gTask", "الأداء المهامي", d.taskMax)}

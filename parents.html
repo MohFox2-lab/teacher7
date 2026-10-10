@@ -18,6 +18,7 @@
   label{display:block;font-weight:700;font-size:14px;margin:0 0 6px}
   .field{margin-bottom:14px}
   input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:15px;background:#fbfdfd;color:var(--text)}
+  select{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:15px;background:#fbfdfd;color:var(--text)}
   input:focus{outline:none;border-color:var(--brand)}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   button{width:100%;border:none;border-radius:14px;padding:14px;font-family:inherit;font-size:16px;font-weight:900;color:#fff;background:var(--brand);cursor:pointer;-webkit-appearance:none;touch-action:manipulation}
@@ -50,11 +51,11 @@
 <div class="wrap">
   <div class="logo">👨‍👩‍👦</div>
   <h1>إشعار أولياء الأمور</h1>
-  <p class="sub">اكتب فصل ابنك ورقمه في الكشف ورمز الدخول الذي أرسله لك المعلم، لتشاهد مستواه ودرجاته.</p>
+  <p class="sub">اختر فصل ابنك من القائمة، ثم أدخل رقمه في الكشف ورمز الدخول الذي أرسله لك المعلم، لتشاهد مستواه ودرجاته.</p>
 
   <div class="card" id="loginCard">
     <div class="row2">
-      <div class="field"><label>الفصل</label><input type="text" id="cls" placeholder="مثال: 6 أو أ"></div>
+      <div class="field"><label>الفصل</label><select id="cls" disabled><option value="">جاري تحميل الفصول…</option></select></div>
       <div class="field"><label>رقم الطالب في الكشف</label><input type="text" inputmode="numeric" id="num" placeholder="مثال: 18"></div>
     </div>
     <div class="field"><label>رمز ولي الأمر</label><input type="text" id="pin" placeholder="6 خانات" autocapitalize="characters" autocomplete="off" style="direction:ltr;text-align:left;letter-spacing:2px"></div>
@@ -83,6 +84,19 @@ var $ = function(id){ return document.getElementById(id); };
 var goBtn = $("goBtn"), msgEl = $("msg");
 function showMsg(t, type){ msgEl.textContent = t; msgEl.className = "msg " + (type || "info"); }
 function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+var DEFAULT_CLASSES = Array.from({length:10}, function(_,i){ return String(i+1); });
+function setClassOptions(classes){
+  classes = Array.isArray(classes) && classes.length ? classes.map(String) : DEFAULT_CLASSES;
+  var el = $("cls");
+  el.innerHTML = '<option value="">اختر فصل الطالب</option>' + classes.map(function(v){ return '<option value="' + esc(v) + '">الفصل ' + esc(v) + '</option>'; }).join('');
+  el.disabled = false;
+}
+function loadClassOptions(){
+  return db.collection("app_config").doc("settings").get().then(function(doc){
+    setClassOptions(doc.exists ? (doc.data().classes || []) : DEFAULT_CLASSES);
+  }).catch(function(){ setClassOptions(DEFAULT_CLASSES); });
+}
+
 
 // ===== توحيد الفصل والرقم (نفس منطق لوحة المعلم) =====
 const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
@@ -185,7 +199,7 @@ function render(r){
   var h = '<div class="card"><div class="name">' + esc(r.name) + '</div>' +
     '<div class="meta">الفصل ' + esc(r.cls) + ' · رقم ' + esc(r.number) + (d ? ' · آخر تحديث: ' + esc(d) : '') + '</div></div>';
 
-  h += '<div class="card total"><div class="meta">⭐ الدرجة الحالية</div><div><span class="big">' + s.total + '</span> <span class="of">/ ' + s.max + '</span></div></div>';
+  h += '<div class="card total"><div class="meta">⭐ الدرجة الحالية — حسب توزيع المعلم</div><div><span class="big">' + s.total + '</span> <span class="of">/ ' + s.max + '</span></div></div>';
 
   h += '<div class="card"><div class="grid">' +
     '<div class="tile"><div class="t">📝 الاختبارات</div><div class="v">' + s.testScore + ' / ' + s.testMax + '</div><div class="s">من إتقان الأبواب</div></div>' +
@@ -231,7 +245,7 @@ try {
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
   clearTimeout(watchdog);
-  ready();
+  loadClassOptions().then(ready);
 } catch (e) {
   showMsg("تعذّر تشغيل الصفحة في هذا المتصفح. جرّب Safari أو Chrome.", "err");
 }

@@ -192,7 +192,8 @@ export function generatePin() {
 }
 
 export const DEFAULT_GRADING = {
-  testMax: 20,        // درجة الاختبار (التحديث الوزاري: 20)
+  schemaVersion: 2,
+  testMax: 10,        // الاختبار: 10 درجات افتراضيًا
   hwMax: 10,          // درجة الواجبات
   partMax: 10,        // درجة المشاركة
   taskMax: 20,        // درجة الأداء المهامي
@@ -200,12 +201,13 @@ export const DEFAULT_GRADING = {
   topicPoints: {},    // تعديل يدوي لدرجة كل موضوع (اختياري)
   currentTask: { title: "", autoFullOnSubmit: true },
   showBehaviorToParents: true,
-  hwMode: "solved"   // طريقة حساب الواجبات: solved = من المواضيع المحلولة، mastered = من المواضيع المتقنة
+  hwMode: "mastered"   // الواجب: يُحتسب عند إتقان الموضوع افتراضيًا
 };
 
 export function normalizeGrading(g) {
   const d = JSON.parse(JSON.stringify(DEFAULT_GRADING));
   const out = Object.assign(d, g || {});
+  out.schemaVersion = 2;
   out.currentTask = Object.assign({ title: "", autoFullOnSubmit: true }, (g && g.currentTask) || {});
   out.topicPoints = (g && g.topicPoints) || {};
   out.scoredTopics = ((g && g.scoredTopics) || DEFAULT_GRADING.scoredTopics).map(Number).sort((a, b) => a - b);
