@@ -198,7 +198,7 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, getDocs, getDoc, setDoc, query, orderBy, doc, deleteDoc, writeBatch
+  getFirestore, collection, getDocs, getDoc, setDoc, query, orderBy, doc, deleteDoc, writeBatch, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { firebaseConfig, decodeCode, formatTimestamp, canonicalizeClass, normalizeNumber, recKey, generatePin, computeReport, normalizeGrading, topicTestPoints, TOPIC_TITLES } from "./common.js";
 
@@ -972,7 +972,7 @@ async function saveCurriculum(){
   c.practiceDisabledTopics=[]; c.examDisabledTopics=[]; c.monthlyPlan.topics=[];
   TOPIC_TITLES.forEach((_,i)=>{ if(!document.querySelector(`[data-curr-pr="${i}"]`).checked)c.practiceDisabledTopics.push(i); if(!document.querySelector(`[data-curr-ex="${i}"]`).checked)c.examDisabledTopics.push(i); if(document.querySelector(`[data-curr-plan="${i}"]`).checked)c.monthlyPlan.topics.push(i); });
   const msg=document.getElementById('currMsg'); msg.textContent='جارٍ الحفظ…'; msg.className='msg-inline';
-  try{ await setDoc(doc(db,'app_config','settings'),{...c,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); msg.textContent='✅ تم الحفظ وتطبيق الخطة مركزيًا على جميع الطلاب.'; msg.className='msg-inline ok'; }
+  try{ await setDoc(doc(db,'app_config','settings'),{...c,updatedAt:serverTimestamp()}); msg.textContent='✅ تم الحفظ وتطبيق الخطة مركزيًا على جميع الطلاب.'; msg.className='msg-inline ok'; }
   catch(e){ console.error(e); msg.textContent='تعذّر الحفظ. تأكد من صلاحيات Firestore.'; msg.className='msg-inline err'; }
 }
 
