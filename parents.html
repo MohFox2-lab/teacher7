@@ -54,7 +54,7 @@
 
   <div class="card" id="loginCard">
     <div class="row2">
-      <div class="field"><label>الفصل</label><input type="text" id="cls" placeholder="مثال: 2/6 أو 6"></div>
+      <div class="field"><label>الفصل</label><input type="text" id="cls" placeholder="مثال: 6 أو أ"></div>
       <div class="field"><label>رقم الطالب في الكشف</label><input type="text" inputmode="numeric" id="num" placeholder="مثال: 18"></div>
     </div>
     <div class="field"><label>رمز ولي الأمر</label><input type="text" id="pin" placeholder="6 خانات" autocapitalize="characters" autocomplete="off" style="direction:ltr;text-align:left;letter-spacing:2px"></div>
@@ -109,12 +109,15 @@ Object.keys(AR_NUMBER_WORDS).forEach(w => {
   if (w.endsWith("ة")) AR_NUMBER_WORDS[w.slice(0, -1) + "ه"] = AR_NUMBER_WORDS[w];
 });
 
+const AR_LETTER_NAMES = { "الف": "أ", "ألف": "أ", "باء": "ب", "جيم": "ج", "دال": "د", "هاء": "ه", "واو": "و", "زاي": "ز", "حاء": "ح" };
+
 function normalizeClassToken(tok) {
-  const t = tok.trim();
+  let t = tok.trim().replace(/[\u0640\u064B-\u0652]/g, "");   // حذف التطويل (هـ) والتشكيل
   if (!t) return "";
   if (AR_NUMBER_WORDS[t]) return AR_NUMBER_WORDS[t];
-  // وحّد أشكال الألف (أ/إ/آ) لحرف الشعبة حتى يتطابق "أ" المكتوبة بأي شكل
-  return t.replace(/^[أإآ]$/u, "ا");
+  if (AR_LETTER_NAMES[t]) return AR_LETTER_NAMES[t];
+  // حرف شعبة واحد: وحّد أشكال الألف (أ/إ/آ/ا) إلى "أ"
+  return t.replace(/^[أإآا]$/u, "أ");
 }
 
 // هذا التطبيق خاص بصف واحد ثابت (الثاني متوسط) — فكل الطلاب "صفهم" نفس الرقم،
@@ -134,21 +137,20 @@ function canonicalizeClass(raw) {
   s = s.replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
   const parts = s.split("/").map(normalizeClassToken).filter(Boolean);
 
-  if (parts.length === 1) {
-    // رقم/حرف واحد بس = رقم الشعبة؛ الصف الثابت يُضاف تلقائيًا
-    return parts[0] === FIXED_GRADE ? parts[0] : FIXED_GRADE + "/" + parts[0];
-  }
-
+  // التطبيق لصف واحد ثابت، فالمهم رقم/حرف الشعبة فقط: 6 أو أ
+  if (parts.length === 1) return parts[0];
   if (parts.length === 2) {
     const [a, b] = parts;
-    if (a === FIXED_GRADE && b !== FIXED_GRADE) return FIXED_GRADE + "/" + b;
-    if (b === FIXED_GRADE && a !== FIXED_GRADE) return FIXED_GRADE + "/" + a;
-    // ما فيه "2" واضح بالطرفين (حالة نادرة) — رتّبها كما كُتبت بدون تخمين
-    return parts.join("/");
+    if (a === b) return a;                                   // 3/3 -> 3
+    if (a === FIXED_GRADE && b !== FIXED_GRADE) return b;    // 2/6 -> 6  ، 2/أ -> أ
+    if (b === FIXED_GRADE && a !== FIXED_GRADE) return a;    // 6/2 -> 6  ، أ/2 -> أ
+    return parts.join("/");                                  // غير واضح — لا نخمّن
   }
-
   return parts.join("/");
 }
+
+// الاسم المعروض لشعبة (هـ بدل ه)
+function classLabel(v) { return v === "ه" ? "هـ" : v; }
 
 
 function normalizeNumber(raw) {
@@ -159,10 +161,10 @@ function normalizeNumber(raw) {
 }
 
 function recKey(cls, number) {
-  const c = canonicalizeClass(cls || "").replace(/\//g, "-");
-  return c + "_" + normalizeNumber(number);
+  // نبقي بادئة الصف الثابت كما كانت (2-6_18) حتى لا تضيع السجلات ورموز الأولياء المنشورة
+  const sec = canonicalizeClass(cls || "").replace(/[أإآ]/g, "ا").replace(/\//g, "-");
+  return FIXED_GRADE + "-" + sec + "_" + normalizeNumber(number);
 }
-
 
 function pill(status){
   if (status === "mastered") return '<span class="ok">🟢 متقن</span>';

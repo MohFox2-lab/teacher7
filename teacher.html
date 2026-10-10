@@ -237,7 +237,7 @@ onAuthStateChanged(auth, (user) => {
 let dbSubs = [];       // من Firestore
 let manualSubs = [];   // من اللصق اليدوي (لا تُحفظ)
 let studentsIndex = {};
-let state = { view: "all", cls: "", search: "", focusKey: "", openStudent: "", editBh: "" };
+let state = { view: "all", cls: "", search: "", focusKey: "", openStudent: "", editBh: "", showCodes: false };
 let records = {};              // سجلات المعلم لكل طالب (المفتاح: الفصل_الرقم)
 let grading = normalizeGrading();
 let taskSubs = [];             // تسليمات المهام من الطلاب
@@ -327,6 +327,7 @@ document.querySelectorAll("button[data-view]").forEach(btn => {
     state.view = btn.dataset.view;
     state.focusKey = "";
     state.openStudent = "";
+    state.showCodes = false;
     render();
   });
 });
@@ -375,7 +376,7 @@ function rebuildAndRender() {
   // تحديث قائمة الفصول بالفلتر
   const clsSel = document.getElementById("classFilter");
   const current = clsSel.value;
-  const classes = [...new Set(Object.values(studentsIndex).map(s => s.cls))].sort((a, b) => a.localeCompare(b, "ar"));
+  const classes = [...new Set(Object.values(studentsIndex).map(s => s.cls))].sort((a, b) => a.localeCompare(b, "ar", { numeric: true }));
   clsSel.innerHTML = `<option value="">كل الفصول</option>` + classes.map(c => `<option value="${escapeAttr(c)}">الفصل ${escapeHtml(c)}</option>`).join("");
   clsSel.value = classes.includes(current) ? current : "";
   state.cls = clsSel.value;
@@ -537,10 +538,42 @@ function parentMessage(st, rec) {
 }
 
 // ---------------- قائمة الطلاب مع الدرجات ----------------
+// ---------------- 📋 جدول رموز أولياء الأمور (للنسخ والإرسال أو الطباعة) ----------------
+function renderCodesTable() {
+  const students = getFilteredStudents().sort((a, b) =>
+    a.cls.localeCompare(b.cls, "ar", { numeric: true }) || (Number(a.number) || 9999) - (Number(b.number) || 9999));
+  const withPin = students.filter(st => st.number && (records[studentRecKey(st)] || {}).parentPin);
+  const missing = students.length - withPin.length;
+  const rows = withPin.map(st => {
+    const rec = records[studentRecKey(st)];
+    return `<tr>
+      <td>${escapeHtml(st.cls)}</td><td>${escapeHtml(st.number)}</td><td>${escapeHtml(st.name)}</td>
+      <td><b style="letter-spacing:2px">${escapeHtml(rec.parentPin)}</b></td>
+      <td style="white-space:pre-line;font-size:12px">${escapeHtml(parentMessage(st, rec))}</td>
+      <td class="no-print"><button class="pillbtn small" data-act="copyRowMsg" data-key="${escapeAttr(st.key)}">📋 نسخ</button></td>
+    </tr>`;
+  }).join("");
+  content.innerHTML = `
+    <div id="exportArea">
+      <div class="rowbtns no-print" style="margin:6px 0 12px">
+        <button class="pillbtn" data-act="hideCodes">↩ رجوع للدرجات</button>
+        <button class="pillbtn primary" data-act="publishAll">📤 نشر/تحديث التقارير (لإنشاء الرموز الناقصة)</button>
+      </div>
+      <div id="filesMsg" class="msg-inline" style="display:none"></div>
+      <h2 class="section">📋 رموز أولياء الأمور (${withPin.length} طالب)</h2>
+      <div class="hintline no-print">انسخ رسالة كل طالب وأرسلها لولي أمره، أو استخدم أزرار CSV / طباعة / PDF فوق. ${missing ? `⚠️ ${missing} طالب ليس عنده رمز بعد — اضغط «نشر/تحديث التقارير» أولاً.` : ""}</div>
+      ${withPin.length ? `<table id="summaryTable">
+        <thead><tr><th>الفصل</th><th>الرقم</th><th>الطالب</th><th>رمز الدخول</th><th>نص الرسالة</th><th class="no-print"></th></tr></thead>
+        <tbody>${rows}</tbody></table>` : `<div class="empty">لا توجد رموز بعد — اضغط «نشر/تحديث التقارير».</div>`}
+    </div>`;
+  content.onclick = viewClick;
+}
+
 function renderFilesView() {
   if (state.openStudent) { renderStudentDetail(state.openStudent); return; }
+  if (state.showCodes) { renderCodesTable(); return; }
   const students = getFilteredStudents().sort((a, b) =>
-    a.cls.localeCompare(b.cls, "ar") || (Number(a.number) || 9999) - (Number(b.number) || 9999));
+    a.cls.localeCompare(b.cls, "ar", { numeric: true }) || (Number(a.number) || 9999) - (Number(b.number) || 9999));
 
   const rows = students.map(st => {
     const rep = studentReport(st), sc = rep.scores;
@@ -561,6 +594,7 @@ function renderFilesView() {
     <div id="exportArea">
       <div class="rowbtns no-print" style="margin:6px 0 12px">
         <button class="pillbtn primary" data-act="publishAll">📤 نشر/تحديث تقارير كل أولياء الأمور</button>
+        <button class="pillbtn" data-act="showCodes">📋 تصدير رموز الأولياء</button>
         <button class="pillbtn" data-act="addStudent">➕ إضافة طالب يدويًا</button>
       </div>
       <div id="filesMsg" class="msg-inline" style="display:none"></div>
@@ -678,7 +712,18 @@ async function viewClick(e) {
   try {
     if (act === "open") { state.openStudent = b.dataset.key; state.editBh = ""; render(); return; }
     if (act === "back") { state.openStudent = ""; state.editBh = ""; render(); return; }
-    if (act === "publishAll") { await publishAll(); return; }
+    if (act === "publishAll") { await publishAll(); if (state.showCodes) renderCodesTable(); return; }
+    if (act === "showCodes") { state.showCodes = true; render(); return; }
+    if (act === "hideCodes") { state.showCodes = false; render(); return; }
+    if (act === "copyRowMsg") {
+      const s2 = studentsIndex[b.dataset.key], r2 = s2 && records[studentRecKey(s2)];
+      if (!s2 || !r2) return;
+      const msg = parentMessage(s2, r2);
+      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(msg);
+      else prompt("انسخ الرسالة:", msg);
+      flash("تم نسخ رسالة " + s2.name + " ✅", true);
+      return;
+    }
     if (act === "addStudent") { await addStudentManually(); return; }
     if (act === "saveGrading") { await saveGrading(); return; }
     if (act === "equalSplit") { syncGradingDraft(); gradingDraft.topicPoints = {}; render(); return; }
@@ -745,7 +790,7 @@ async function publishIfPublished(st) {
 }
 
 async function addStudentManually() {
-  const clsRaw = prompt("الفصل (مثال: 2/6 أو سته):");
+  const clsRaw = prompt("الفصل (رقم أو حرف، مثال: 6 أو أ):");
   if (!clsRaw) return;
   const numRaw = prompt("رقم الطالب في الكشف:");
   if (!numRaw) return;
