@@ -601,6 +601,7 @@ function renderFilesView() {
       <td>${fmtScore(sc.part, sc.partMax)}</td>
       <td>${fmtScore(sc.task, sc.taskMax)}</td>
       <td><b>${sc.total} / ${sc.max}</b></td>
+      <td><b style="letter-spacing:2px;direction:ltr;display:inline-block">${escapeHtml((records[studentRecKey(st)]||{}).parentPin || "—")}</b></td>
     </tr>`;
   }).join("");
 
@@ -618,7 +619,7 @@ function renderFilesView() {
       <div class="hintline no-print">اضغط على أي طالب لفتح ملفه (المشاركة، المهام، السلوك، رمز ولي الأمر).</div>
       ${students.length ? `
       <table id="summaryTable">
-        <thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>الإتقان</th><th>الاختبار</th><th>الواجبات</th><th>المشاركة</th><th>الأداء المهامي</th><th>المجموع</th></tr></thead>
+        <thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>الإتقان</th><th>الاختبار</th><th>الواجبات</th><th>المشاركة</th><th>الأداء المهامي</th><th>المجموع</th><th>رمز ولي الأمر</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>` : `<div class="empty">ما فيه طلاب مطابقين للفلاتر الحالية.</div>`}
     </div>`;
