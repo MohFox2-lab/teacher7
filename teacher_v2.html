@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>لوحة المعلم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
+<style>
+  :root{
+    --brand:#0f6e6b; --brand-dark:#0a4e4c;
+    --bg:#f3f7f6; --card:#ffffff; --line:#e1e8e7;
+    --text:#12302f; --sub:#5b7573; --err:#b3261e; --ok:#1e7a4a; --warn:#9a6b00;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .hidden{display:none !important}
+
+  /* ---------- شاشة الدخول ---------- */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .loginCard{
+    width:100%;max-width:380px;background:#fff;border:1px solid var(--line);border-radius:18px;
+    padding:30px 26px;box-shadow:0 12px 34px rgba(15,60,58,.08);text-align:center;
+  }
+  .loginCard .logo{
+    width:56px;height:56px;border-radius:16px;background:var(--brand);margin:0 auto 14px;
+    display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;
+  }
+  .loginCard h1{font-size:20px;font-weight:900;margin:0 0 20px;color:var(--brand-dark)}
+  .loginCard input{
+    width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-family:inherit;font-size:15px;margin-bottom:12px;background:#fbfdfd;
+  }
+  .loginCard input:focus{outline:none;border-color:var(--brand)}
+  .loginCard button{
+    width:100%;border:none;border-radius:12px;padding:13px;font-weight:900;font-size:15px;
+    background:var(--brand);color:#fff;cursor:pointer;
+  }
+  #loginErr{color:var(--err);font-size:13.5px;margin-top:10px;display:none}
+
+  /* ---------- لوحة التحكم ---------- */
+  header{
+    background:var(--brand);color:#fff;padding:16px 18px;display:flex;align-items:center;
+    justify-content:space-between;position:sticky;top:0;z-index:5;
+  }
+  header h1{font-size:17px;margin:0;font-weight:900}
+  header button{
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;
+    border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13.5px;cursor:pointer;
+  }
+  main{max-width:1080px;margin:0 auto;padding:20px 16px 70px}
+
+  .box{
+    background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;
+  }
+  .box h3{margin:0 0 10px;font-size:14.5px;font-weight:800;color:var(--brand-dark)}
+  textarea#manualCodes{
+    width:100%;min-height:80px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;
+    font-family:monospace;font-size:12.5px;direction:ltr;text-align:left;resize:vertical;
+  }
+  textarea#manualCodes:focus{outline:none;border-color:var(--brand)}
+  .rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  button.pillbtn{
+    border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:9px 15px;
+    font-family:inherit;font-size:13.5px;font-weight:700;color:var(--text);cursor:pointer;
+    transition:.15s;
+  }
+  button.pillbtn:hover{background:#f2f8f7}
+  button.pillbtn.active{background:var(--brand);border-color:var(--brand);color:#fff}
+  button.pillbtn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  button.pillbtn.primary:hover{background:var(--brand-dark)}
+  button.pillbtn.danger{border-color:#f3c6c2;color:var(--err)}
+  button.pillbtn.danger:hover{background:#fdecea}
+  button.pillbtn.danger.small{padding:4px 10px;font-size:12px;border-radius:9px}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .toolbar select, .toolbar input[type="text"]{
+    border:1.5px solid var(--line);border-radius:11px;padding:9px 13px;font-family:inherit;
+    font-size:13.5px;background:#fff;
+  }
+  .toolbar select:focus, .toolbar input:focus{outline:none;border-color:var(--brand)}
+  #searchBox{flex:1;min-width:180px}
+
+  .msg-inline{font-size:13px;margin-top:8px;font-weight:700;display:none}
+  .msg-inline.ok{color:var(--ok);display:block}
+  .msg-inline.err{color:var(--err);display:block}
+
+  h2.section{font-size:15.5px;font-weight:900;margin:22px 0 10px;color:var(--brand-dark)}
+  .hintline{font-size:12.5px;color:var(--sub);margin:-4px 0 14px;line-height:1.7}
+
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;
+        border:1px solid var(--line)}
+  th,td{padding:10px 11px;text-align:right;font-size:13px;border-bottom:1px solid var(--line)}
+  th{background:#eef5f4;font-weight:800;color:var(--brand-dark);white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  tr.clickable{cursor:pointer}
+  tr.clickable:hover{background:#f6faf9}
+  tr.focused{background:#e9f7ef}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800}
+  .pill.good{background:#e9f7ef;color:var(--ok)}
+  .pill.mid{background:#fff6e0;color:var(--warn)}
+  .pill.low{background:#fdecea;color:var(--err)}
+  .chip{display:inline-block;background:#eef5f4;color:var(--brand-dark);border-radius:8px;
+        padding:3px 10px;margin:2px;font-size:12.5px}
+  .empty{text-align:center;color:var(--sub);padding:40px 10px;font-size:14px}
+  .loading{text-align:center;color:var(--sub);padding:40px 10px;font-size:14px}
+  .none{color:var(--sub)}
+
+  .chapterCard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+  .chapterCard .title{font-weight:900;color:var(--brand-dark);font-size:14px;margin-bottom:8px}
+
+  @media print{
+    #loginScreen, header, .box, .toolbar, .no-print{display:none !important}
+    body{background:#fff}
+    main{padding:0;max-width:100%}
+    table{border:1px solid #000}
+    th,td{border:1px solid #000;font-size:11px}
+  }
+</style>
+</head>
+<body>
+
+<!-- شاشة الدخول -->
+<div id="loginScreen">
+  <div class="loginCard">
+    <div class="logo">🔒</div>
+    <h1>دخول المعلم</h1>
+    <form id="loginForm">
+      <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required autocomplete="username">
+      <input type="password" id="loginPass" placeholder="كلمة السر" required autocomplete="current-password">
+      <button type="submit" id="loginBtn">دخول</button>
+    </form>
+    <div id="loginErr">بيانات الدخول غير صحيحة</div>
+  </div>
+</div>
+
+<!-- لوحة التحكم -->
+<div id="dashboard" class="hidden">
+  <header class="no-print">
+    <h1>👨‍🏫 لوحة المعلم</h1>
+    <button id="logoutBtn">🔒 خروج</button>
+  </header>
+  <main>
+    <!-- صندوق التحقق اليدوي -->
+    <div class="box no-print">
+      <h3>✔️ تحقق يدوي من رموز</h3>
+      <div class="hintline">الصق رموز الطلاب (رمز في كل سطر أو مفصولة بمسافات) ثم اضغط «تحقق». هذي الرموز تُعرض فورًا هنا ولا تُحفظ في القاعدة — مفيدة لو استلمت رمز عبر واتساب مثلًا.</div>
+      <textarea id="manualCodes" placeholder="الصق رمز أو أكثر هنا…"></textarea>
+      <div class="rowbtns">
+        <button class="pillbtn primary" id="verifyBtn">✔️ تحقق</button>
+        <button class="pillbtn" id="clearManualBtn">مسح الرموز اليدوية</button>
+      </div>
+      <div id="manualMsg" class="msg-inline"></div>
+    </div>
+
+    <!-- أزرار العرض -->
+    <div class="rowbtns no-print" style="margin-bottom:14px">
+      <button class="pillbtn active" data-view="all">عرض جميع الطلاب والجلسات</button>
+      <button class="pillbtn" data-view="chapters">عرض الأبواب حسب الإتقان</button>
+      <button class="pillbtn" data-view="masteredOnly">عرض الأبواب المتقنة فقط</button>
+      <button class="pillbtn" data-view="classProgress">📊 تقدم الفصل</button>
+      <button class="pillbtn" data-view="reports">📤 التقارير</button>
+      <button class="pillbtn" data-view="files">🎓 ملفات الطلاب والدرجات</button>
+      <button class="pillbtn" data-view="grading">⚙️ توزيع الدرجات</button>
+      <button class="pillbtn" data-view="curriculum">📚 خطة المنهج</button>
+      <button class="pillbtn" data-view="parents">👨‍👩‍👦 إشعار الأولياء</button>
+    </div>
+
+    <!-- فلاتر -->
+    <div class="toolbar no-print">
+      <select id="classFilter"><option value="">كل الفصول</option></select>
+      <input type="text" id="searchBox" placeholder="🔍 ابحث باسم الطالب…">
+      <button class="pillbtn" id="resetFocusBtn" style="display:none">↩ عرض كل الطلاب</button>
+      <button class="pillbtn danger" id="deleteAllBtn" style="margin-right:auto">🗑️ حذف كل الطلاب</button>
+    </div>
+
+    <!-- أزرار التصدير -->
+    <div class="rowbtns no-print" style="margin-bottom:6px">
+      <button class="pillbtn" id="exportCsv">⬇️ CSV</button>
+      <button class="pillbtn" id="exportPrint">🖨️ طباعة</button>
+      <button class="pillbtn" id="exportPdf">📕 PDF</button>
+      <button class="pillbtn" id="exportWord">📝 Word</button>
+    </div>
+
+    <div id="content"></div>
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, getDocs, getDoc, setDoc, query, orderBy, doc, deleteDoc, writeBatch, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { firebaseConfig, decodeCode, formatTimestamp, canonicalizeClass, normalizeNumber, recKey, generatePin, computeReport, normalizeGrading, topicTestPoints, TOPIC_TITLES } from "./common.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const loginScreen = document.getElementById("loginScreen");
+const dashboard = document.getElementById("dashboard");
+const content = document.getElementById("content");
+
+// ---------------- تسجيل الدخول ----------------
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const pass = document.getElementById("loginPass").value;
+  const errEl = document.getElementById("loginErr");
+  errEl.style.display = "none";
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (err) {
+    errEl.style.display = "block";
+  }
+});
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loginScreen.classList.add("hidden");
+    dashboard.classList.remove("hidden");
+    loadData();
+  } else {
+    dashboard.classList.add("hidden");
+    loginScreen.classList.remove("hidden");
+  }
+});
+
+// ---------------- الحالة العامة ----------------
+let dbSubs = [];       // من Firestore
+let manualSubs = [];   // من اللصق اليدوي (لا تُحفظ)
+let studentsIndex = {};
+let state = { view: "all", cls: "", search: "", focusKey: "", openStudent: "", editBh: "", showCodes: false };
+let records = {};              // سجلات المعلم لكل طالب (المفتاح: الفصل_الرقم)
+let grading = normalizeGrading();
+let taskSubs = [];             // تسليمات المهام من الطلاب
+let gradingDraft = null;
+
+async function loadData() {
+  content.innerHTML = `<div class="loading">جارٍ تحميل البيانات…</div>`;
+  try {
+    const snap = await getDocs(query(collection(db, "submissions"), orderBy("createdAt", "desc")));
+    dbSubs = snap.docs.map(d => ({ id: d.id, source: "db", ...d.data() }));
+    await loadExtraData();
+    rebuildAndRender();
+  } catch (err) {
+    console.error(err);
+    content.innerHTML = `<div class="empty">تعذّر تحميل البيانات. تأكد من الاتصال وحدّث الصفحة.</div>`;
+  }
+}
+
+// سجلات الطلاب + توزيع الدرجات + تسليمات المهام (فشلها لا يمنع عرض رموز الإنجاز)
+async function loadExtraData() {
+  try {
+    const rs = await getDocs(collection(db, "student_records"));
+    records = {};
+    rs.docs.forEach(d => { records[d.id] = d.data(); });
+  } catch (e) { console.error("records", e); }
+  try {
+    const g = await getDoc(doc(db, "app_config", "grading"));
+    const rawG = g.exists() ? g.data() : null;
+    grading = normalizeGrading(rawG);
+    if (!rawG || Number(rawG.schemaVersion || 0) < 2) {
+      // ترحيل النسخة القديمة إلى التوزيع المطلوب: 10 اختبار + 10 واجب + 10 مشاركة + 20 أداء مهامي
+      await setDoc(doc(db, "app_config", "grading"), grading);
+    }
+  } catch (e) { console.error("grading", e); }
+  try {
+    const ts = await getDocs(query(collection(db, "task_submissions"), orderBy("createdAt", "desc")));
+    taskSubs = ts.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { console.error("tasks", e); }
+}
+
+// ---------------- التحقق اليدوي ----------------
+document.getElementById("verifyBtn").addEventListener("click", () => {
+  const raw = document.getElementById("manualCodes").value;
+  const lines = raw.split(/[\s]+/).map(s => s.trim()).filter(Boolean);
+  const msgEl = document.getElementById("manualMsg");
+  if (!lines.length) {
+    msgEl.textContent = "الصق رمز واحد على الأقل.";
+    msgEl.className = "msg-inline err";
+    return;
+  }
+  let ok = 0, bad = 0;
+  lines.forEach(code => {
+    const d = decodeCode(code);
+    if (!d) { bad++; return; }
+    ok++;
+    manualSubs.push({
+      source: "manual",
+      studentName: d.name,
+      studentClass: d.cls,
+      rosterNumber: d.studentNumber,
+      decodedVersion: d.version,
+      decodedName: d.name,
+      decodedClass: d.cls,
+      decodedStudentNumber: d.studentNumber,
+      decodedTimestamp: d.timestamp,
+      correct: d.correct,
+      total: d.total,
+      minutes: d.minutes,
+      mastered: d.mastered
+    });
+  });
+  msgEl.textContent = bad
+    ? `تم التحقق من ${ok} رمز، وتعذّر فك ${bad} رمز (تأكد إنه منسوخ كامل).`
+    : `✅ تم التحقق من ${ok} رمز بنجاح.`;
+  msgEl.className = "msg-inline " + (bad && !ok ? "err" : "ok");
+  document.getElementById("manualCodes").value = "";
+  rebuildAndRender();
+});
+
+document.getElementById("clearManualBtn").addEventListener("click", () => {
+  manualSubs = [];
+  document.getElementById("manualMsg").textContent = "";
+  document.getElementById("manualMsg").className = "msg-inline";
+  rebuildAndRender();
+});
+
+// ---------------- أزرار العرض ----------------
+document.querySelectorAll("button[data-view]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("button[data-view]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.view = btn.dataset.view;
+    state.focusKey = "";
+    state.openStudent = "";
+    state.showCodes = false;
+    render();
+  });
+});
+
+document.getElementById("classFilter").addEventListener("change", (e) => {
+  state.cls = e.target.value; state.focusKey = ""; render();
+});
+document.getElementById("searchBox").addEventListener("input", (e) => {
+  state.search = e.target.value.trim(); state.focusKey = ""; render();
+});
+document.getElementById("resetFocusBtn").addEventListener("click", () => {
+  state.focusKey = ""; render();
+});
+
+// ---------------- بناء الفهرس ----------------
+function rebuildAndRender() {
+  const all = dbSubs.concat(manualSubs);
+  studentsIndex = {};
+  const aliasMap = {};
+  Object.values(records).forEach(r => {
+    if (r && r.aliasName && r.number) aliasMap[(canonicalizeClass(r.cls || "") || "غير محدد") + "#" + r.aliasName] = normalizeNumber(r.number);
+  });
+  for (const s of all) {
+    const cls = canonicalizeClass(s.decodedClass || s.studentClass || "") || "غير محدد";
+    const number = normalizeNumber(s.decodedStudentNumber || s.rosterNumber || "") || aliasMap[`${cls}#${s.decodedName || s.studentName}`] || "";
+    const key = number ? `${cls}#${number}` : `${cls}#${s.decodedName || s.studentName}`;
+    if (!studentsIndex[key]) {
+      studentsIndex[key] = {
+        key, cls, number,
+        name: s.studentName || s.decodedName || "بدون اسم",
+        rosterNumber: number,
+        sessions: []
+      };
+    }
+    studentsIndex[key].sessions.push(s);
+  }
+  // طلاب أضافهم المعلم يدويًا أو لهم سجل ولم يرسلوا رمزًا بعد
+  Object.values(records).forEach(r => {
+    if (!r || !r.number) return;
+    const cls = canonicalizeClass(r.cls || "") || "غير محدد";
+    const key = `${cls}#${normalizeNumber(r.number)}`;
+    if (!studentsIndex[key]) {
+      studentsIndex[key] = { key, cls, number: normalizeNumber(r.number), name: r.name || "بدون اسم", rosterNumber: normalizeNumber(r.number), sessions: [] };
+    }
+  });
+  Object.values(studentsIndex).forEach(st => {
+    st.sessions.sort((a, b) => (b.decodedTimestamp || "").localeCompare(a.decodedTimestamp || ""));
+  });
+
+  // تحديث قائمة الفصول بالفلتر
+  const clsSel = document.getElementById("classFilter");
+  const current = clsSel.value;
+  const classes = [...new Set(Object.values(studentsIndex).map(s => s.cls))].sort((a, b) => a.localeCompare(b, "ar", { numeric: true }));
+  clsSel.innerHTML = `<option value="">كل الفصول</option>` + classes.map(c => `<option value="${escapeAttr(c)}">الفصل ${escapeHtml(c)}</option>`).join("");
+  clsSel.value = classes.includes(current) ? current : "";
+  state.cls = clsSel.value;
+
+  render();
+}
+
+function getFilteredStudents() {
+  let list = Object.values(studentsIndex);
+  if (state.cls) list = list.filter(s => s.cls === state.cls);
+  if (state.search) list = list.filter(s => s.name.includes(state.search) || (s.rosterNumber + "").includes(state.search));
+  if (state.view === "masteredOnly") {
+    list = list.filter(s => {
+      const set = new Set(); s.sessions.forEach(ss => (ss.mastered || []).forEach(m => set.add(m)));
+      return set.size > 0;
+    });
+  }
+  if (state.focusKey) list = list.filter(s => s.key === state.focusKey);
+  return list.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+}
+
+function accuracyPill(correct, total) {
+  if (!total) return `<span class="pill mid">—</span>`;
+  const pct = Math.round((correct / total) * 100);
+  const cls = pct >= 75 ? "good" : pct >= 50 ? "mid" : "low";
+  return `<span class="pill ${cls}">${pct}%</span>`;
+}
+
+// ---------------- العرض الرئيسي ----------------
+function render() {
+  document.getElementById("resetFocusBtn").style.display = state.focusKey ? "inline-block" : "none";
+
+  content.onclick = null; content.onchange = null;
+  if (!dbSubs.length && !manualSubs.length && !Object.keys(records).length) {
+    content.innerHTML = `<div class="empty">ما وصلت أي رموز إنجاز بعد — انتظر إرسال الطلاب، أو جرّب التحقق اليدوي فوق.</div>`;
+    return;
+  }
+
+  if (state.view === "chapters") { renderChaptersView(); return; }
+  if (state.view === "classProgress") { renderClassProgressView(); return; }
+  if (state.view === "reports") { renderReportsView(); return; }
+  if (state.view === "files") { renderFilesView(); return; }
+  if (state.view === "grading") { renderGradingView(); return; }
+  if (state.view === "curriculum") { renderCurriculumView(); return; }
+  if (state.view === "parents") { renderParentsView(); return; }
+  renderAllView(); // "all" و "masteredOnly" يشتركان بنفس شكل الجدولين
+}
+
+// ============================================================
+// 🎓 ملفات الطلاب والدرجات + ⚙️ توزيع الدرجات + تقارير أولياء الأمور
+// ============================================================
+const BH_TYPES = [
+  { v: "شغب", label: "😈 مشاغب" },
+  { v: "أدب", label: "🌟 مؤدب" },
+  { v: "نوم", label: "😴 النوم في الحصة" },
+  { v: "حديث", label: "🗣️ التحدث أثناء الدرس" },
+  { v: "أخرى", label: "📝 أخرى" }
+];
+const bhLabel = v => (BH_TYPES.find(t => t.v === v) || { label: v }).label;
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const fmtScore = (v, max) => (v === null || v === undefined ? "—" : v) + " / " + max;
+
+function studentRecKey(st) { return st.number ? recKey(st.cls, st.number) : ""; }
+
+function masteredAttempted(st) {
+  const M = new Set(), A = new Set(), S = new Set();
+  st.sessions.forEach(s => {
+    (s.mastered || []).forEach(m => { const n = parseInt(m, 10); if (!isNaN(n)) M.add(n); });
+    (s.attempted || []).forEach(a => { const n = parseInt(a, 10); if (!isNaN(n)) A.add(n); });
+    (s.solved || []).forEach(a => { const n = parseInt(a, 10); if (!isNaN(n)) S.add(n); });
+  });
+  return { mastered: [...M], attempted: [...A], solved: [...S] };
+}
+
+function studentTaskSubs(st) {
+  const rk = studentRecKey(st);
+  if (!rk) return [];
+  const title = (grading.currentTask.title || "").trim();
+  return taskSubs.filter(t => recKey(t.studentClass, t.rosterNumber) === rk && (!title || t.taskTitle === title));
+}
+
+function studentReport(st) {
+  const { mastered, attempted, solved } = masteredAttempted(st);
+  const rk = studentRecKey(st);
+  return computeReport({
+    grading, mastered, attempted, solved,
+    record: records[rk] || {},
+    taskDelivered: studentTaskSubs(st).length > 0
+  });
+}
+
+function flash(msg, ok) {
+  const el = document.getElementById("filesMsg");
+  if (el) { el.textContent = msg; el.style.color = ok === false ? "var(--err)" : "var(--ok)"; el.style.display = "block"; }
+  else alert(msg);
+}
+
+async function saveRecord(st, patch) {
+  const rk = studentRecKey(st);
+  if (!rk) { alert("هذا الطالب بدون رقم في الكشف — لا يمكن حفظ سجل له."); return false; }
+  const base = records[rk] || {};
+  const rec = Object.assign({}, base, patch, {
+    name: base.name || st.name, cls: st.cls, number: st.number, updatedAt: Date.now()
+  });
+  await setDoc(doc(db, "student_records", rk), rec);
+  records[rk] = rec;
+  return true;
+}
+
+function reportPayload(st, rec) {
+  const rep = studentReport(st);
+  return {
+    name: st.name, cls: st.cls, number: st.number,
+    parentPin: rec.parentPin || "",
+    updatedAt: Date.now(),
+    masteredCount: rep.masteredCount, requiredCount: rep.requiredCount,
+    topics: rep.topics, scores: rep.scores,
+    taskTitle: grading.currentTask.title || "",
+    showBehavior: !!grading.showBehaviorToParents,
+    behaviors: grading.showBehaviorToParents ? (rec.behaviors || []) : []
+  };
+}
+
+async function publishStudent(st) {
+  const rk = studentRecKey(st);
+  if (!rk) { alert("هذا الطالب بدون رقم في الكشف."); return false; }
+  if (!(records[rk] && records[rk].parentPin)) await saveRecord(st, { parentPin: generatePin() });
+  const rec = records[rk];
+  await setDoc(doc(db, "parent_reports", rk + "_" + rec.parentPin), reportPayload(st, rec));
+  return true;
+}
+
+async function publishAll() {
+  const list = Object.values(studentsIndex).filter(s => s.number);
+  if (!list.length) { flash("ما فيه طلاب لهم أرقام لنشر تقاريرهم.", false); return; }
+  flash("جارٍ نشر التقارير…", true);
+  const CHUNK = 150;
+  for (let i = 0; i < list.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    const staged = {};
+    list.slice(i, i + CHUNK).forEach(st => {
+      const rk = studentRecKey(st);
+      let rec = records[rk] || {};
+      if (!rec.parentPin) {
+        rec = Object.assign({}, rec, { name: rec.name || st.name, cls: st.cls, number: st.number, parentPin: generatePin(), updatedAt: Date.now() });
+        batch.set(doc(db, "student_records", rk), rec);
+        staged[rk] = rec;
+      }
+      batch.set(doc(db, "parent_reports", rk + "_" + rec.parentPin), reportPayload(st, rec));
+    });
+    await batch.commit();
+    Object.assign(records, staged);
+  }
+  flash("✅ تم نشر تقارير " + list.length + " طالب لأولياء الأمور.", true);
+}
+
+function parentLink() {
+  // حل نسبي لمجلد الصفحة نفسها، حتى يعمل على GitHub Pages داخل مستودع فرعي.
+  return new URL("./parents.html", window.location.href).href;
+}
+
+function parentMessage(st, rec) {
+  return `السلام عليكم ولي أمر الطالب ${st.name}\nلمتابعة درجات ومستوى ابنكم في مادة العلوم افتحوا الرابط:\n${parentLink()}\nالفصل: ${st.cls}\nرقم الطالب: ${st.number}\nرمز الدخول: ${rec.parentPin}`;
+}
+
+// ---------------- قائمة الطلاب مع الدرجات ----------------
+// ---------------- 📋 جدول رموز أولياء الأمور (للنسخ والإرسال أو الطباعة) ----------------
+function renderCodesTable() {
+  const students = getFilteredStudents().sort((a, b) =>
+    a.cls.localeCompare(b.cls, "ar", { numeric: true }) || (Number(a.number) || 9999) - (Number(b.number) || 9999));
+  const withPin = students.filter(st => st.number && (records[studentRecKey(st)] || {}).parentPin);
+  const missing = students.length - withPin.length;
+  const rows = withPin.map(st => {
+    const rec = records[studentRecKey(st)];
+    return `<tr>
+      <td>${escapeHtml(st.cls)}</td><td>${escapeHtml(st.number)}</td><td>${escapeHtml(st.name)}</td>
+      <td><b style="letter-spacing:2px">${escapeHtml(rec.parentPin)}</b></td>
+      <td style="white-space:pre-line;font-size:12px">${escapeHtml(parentMessage(st, rec))}</td>
+      <td class="no-print"><button class="pillbtn small" data-act="copyRowMsg" data-key="${escapeAttr(st.key)}">📋 نسخ</button></td>
+    </tr>`;
+  }).join("");
+  content.innerHTML = `
+    <div id="exportArea">
+      <div class="rowbtns no-print" style="margin:6px 0 12px">
+        <button class="pillbtn" data-act="hideCodes">↩ رجوع للدرجات</button>
+        <button class="pillbtn primary" data-act="publishAll">📤 نشر/تحديث التقارير (لإنشاء الرموز الناقصة)</button>
+      </div>
+      <div id="filesMsg" class="msg-inline" style="display:none"></div>
+      <h2 class="section">📋 رموز أولياء الأمور (${withPin.length} طالب)</h2>
+      <div class="hintline no-print">انسخ رسالة كل طالب وأرسلها لولي أمره، أو استخدم أزرار CSV / طباعة / PDF فوق. ${missing ? `⚠️ ${missing} طالب ليس عنده رمز بعد — اضغط «نشر/تحديث التقارير» أولاً.` : ""}</div>
+      ${withPin.length ? `<table id="summaryTable">
+        <thead><tr><th>الفصل</th><th>الرقم</th><th>الطالب</th><th>رمز الدخول</th><th>نص الرسالة</th><th class="no-print"></th></tr></thead>
+        <tbody>${rows}</tbody></table>` : `<div class="empty">لا توجد رموز بعد — اضغط «نشر/تحديث التقارير».</div>`}
+    </div>`;
+  content.onclick = viewClick;
+}
+
+function renderFilesView() {
+  if (state.openStudent) { renderStudentDetail(state.openStudent); return; }
+  if (state.showCodes) { renderCodesTable(); return; }
+  const students = getFilteredStudents().sort((a, b) =>
+    a.cls.localeCompare(b.cls, "ar", { numeric: true }) || (Number(a.number) || 9999) - (Number(b.number) || 9999));
+
+  const rows = students.map(st => {
+    const rep = studentReport(st), sc = rep.scores;
+    return `<tr class="clickable" data-act="open" data-key="${escapeAttr(st.key)}">
+      <td>${escapeHtml(st.number || "—")}</td>
+      <td>${escapeHtml(st.name)}</td>
+      <td>${escapeHtml(st.cls)}</td>
+      <td>${rep.masteredCount} / ${rep.requiredCount}</td>
+      <td>${sc.testScore} / ${sc.testMax}</td>
+      <td>${sc.hwScore} / ${sc.hwMax}</td>
+      <td>${fmtScore(sc.part, sc.partMax)}</td>
+      <td>${fmtScore(sc.task, sc.taskMax)}</td>
+      <td><b>${sc.total} / ${sc.max}</b></td>
+      <td><b style="letter-spacing:2px;direction:ltr;display:inline-block">${escapeHtml((records[studentRecKey(st)]||{}).parentPin || "—")}</b></td>
+    </tr>`;
+  }).join("");
+
+  content.innerHTML = `
+    <div id="exportArea">
+      <div class="rowbtns no-print" style="margin:6px 0 12px">
+        <button class="pillbtn primary" data-act="publishAll">📤 نشر/تحديث تقارير كل أولياء الأمور</button>
+        <button class="pillbtn" data-act="showCodes">📋 تصدير رموز الأولياء</button>
+        <button class="pillbtn" data-act="importRoster">📥 استيراد أسماء دفعة واحدة</button>
+        <button class="pillbtn" data-act="bulkGrade">✍️ إدخال درجة جماعية</button>
+        <button class="pillbtn" data-act="addStudent">➕ إضافة طالب يدويًا</button>
+      </div>
+      <div id="filesMsg" class="msg-inline" style="display:none"></div>
+      <h2 class="section">🎓 درجات الطلاب (من ${grading.testMax + grading.hwMax + grading.partMax + grading.taskMax})</h2>
+      <div class="hintline no-print">اضغط على أي طالب لفتح ملفه (المشاركة، المهام، السلوك، رمز ولي الأمر).</div>
+      ${students.length ? `
+      <table id="summaryTable">
+        <thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>الإتقان</th><th>الاختبار</th><th>الواجبات</th><th>المشاركة</th><th>الأداء المهامي</th><th>المجموع</th><th>رمز ولي الأمر</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>` : `<div class="empty">ما فيه طلاب مطابقين للفلاتر الحالية.</div>`}
+    </div>`;
+  content.onclick = viewClick;
+}
+
+// ---------------- ملف طالب ----------------
+function renderStudentDetail(key) {
+  const st = studentsIndex[key];
+  if (!st) { state.openStudent = ""; render(); return; }
+  const rk = studentRecKey(st);
+  const rec = records[rk] || {};
+  const rep = studentReport(st);
+  const sc = rep.scores;
+  const behaviors = (rec.behaviors || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const editing = state.editBh ? (rec.behaviors || []).find(b => b.id === state.editBh) : null;
+  const subs = studentTaskSubs(st);
+
+  const stLabel = { mastered: "🟢 متقن", solved: "🟡 حل ولم يتقن", started: "🟠 بدأ ولم يكمل", none: "🔴 لم يحل" };
+  const hwLabel = (t) => t.hwDone ? "✅ " + t.hwPts + " / " + t.hwPts
+    : (t.status === "started" || t.status === "solved") ? "🟠 لم يكمل الواجب" : "❌ لم يحل الواجب";
+  const topicRows = rep.topics.map(t => `<tr>
+      <td>${escapeHtml(t.title)}</td><td>${stLabel[t.status]}</td>
+      <td>${t.status === "mastered" ? t.testPts : 0} / ${t.testPts}</td><td>${hwLabel(t)}</td></tr>`).join("");
+
+  const bhRows = behaviors.map(b => `<tr>
+      <td>${escapeHtml(b.date || "")}</td><td>${escapeHtml(b.period ? "الحصة " + b.period : "—")}</td>
+      <td>${bhLabel(b.type)}</td><td>${escapeHtml(b.note || "")}</td>
+      <td class="no-print"><button class="pillbtn small" data-act="editBh" data-id="${escapeAttr(b.id)}">✏️</button>
+          <button class="pillbtn danger small" data-act="delBh" data-id="${escapeAttr(b.id)}">🗑️</button></td></tr>`).join("");
+
+  const safeLink = u => /^https?:\/\//i.test(u || "") ? `<a href="${escapeAttr(u)}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>` : escapeHtml(u || "—");
+  const subRows = subs.map(t => `<tr><td>${escapeHtml(t.taskTitle)}</td><td>${t.fileUrl ? `<a href="${escapeAttr(t.fileUrl)}" target="_blank" rel="noopener noreferrer">📎 ${escapeHtml(t.fileName || "فتح الملف")}</a>` : safeLink(t.link)}</td><td>${escapeHtml(t.note || "")}</td>
+      <td>${t.createdAt && t.createdAt.toDate ? t.createdAt.toDate().toLocaleDateString("ar-SA") : ""}</td><td class="no-print"><button class="pillbtn danger small" data-act="delTask" data-id="${escapeAttr(t.id)}">🗑️</button></td></tr>`).join("");
+
+  const pin = rec.parentPin
+    ? `<b style="font-size:16px;letter-spacing:2px">${escapeHtml(rec.parentPin)}</b>
+       <button class="pillbtn small" data-act="copyMsg">📋 نسخ رسالة لولي الأمر</button>
+       <button class="pillbtn small" data-act="regenPin">🔄 تجديد الرمز</button>`
+    : `<span class="none">لم يُنشأ بعد — اضغط «نشر تقرير الطالب»</span>`;
+
+  content.innerHTML = `
+    <div id="exportArea">
+      <div class="rowbtns no-print" style="margin-bottom:10px">
+        <button class="pillbtn" data-act="back">↩ كل الطلاب</button>
+        <button class="pillbtn primary" data-act="publishOne">📤 نشر تقرير الطالب لولي الأمر</button>
+      </div>
+      <div id="filesMsg" class="msg-inline" style="display:none"></div>
+      <h2 class="section">${escapeHtml(st.name)} — الفصل ${escapeHtml(st.cls)} — رقم ${escapeHtml(st.number || "—")}</h2>
+
+      ${st.number ? "" : `<div class="box no-print" style="border:2px solid #f59e0b">
+        <h3>⚠️ هذا الطالب بدون رقم — لا يمكن إنشاء رمز ولي الأمر له</h3>
+        <div class="hintline">اكتب رقم الطالب هنا واحفظ، فيظهر في «إشعار الأولياء» وتقدر تنشر تقريره.</div>
+        <input type="number" id="numInput" min="1" style="width:110px;padding:8px;border:1.5px solid var(--line);border-radius:10px">
+        <button class="pillbtn primary" data-act="setNumber">💾 حفظ الرقم</button>
+      </div>`}
+      <div class="box">
+        <h3>⭐ الدرجة الحالية: ${sc.total} / ${sc.max}</h3>
+        <table>
+          <tr><th>الاختبار (من الإتقان)</th><td>${sc.testScore} / ${sc.testMax}</td>
+              <th>الواجبات</th><td>${sc.hwScore} / ${sc.hwMax}</td></tr>
+          <tr><th>المشاركة</th><td>${fmtScore(sc.part, sc.partMax)}</td>
+              <th>الأداء المهامي</th><td>${fmtScore(sc.task, sc.taskMax)} — ${escapeHtml(sc.taskStatus)}</td></tr>
+        </table>
+        <div class="hintline" style="margin-top:8px">🔑 رمز ولي الأمر: ${pin}</div>
+      </div>
+
+      <div class="box no-print">
+        <h3>🧑‍🏫 المشاركة (من ${sc.partMax})</h3>
+        <input type="number" id="partInput" min="0" max="${sc.partMax}" step="0.5" value="${rec.participation ?? ""}" style="width:90px;padding:8px;border:1.5px solid var(--line);border-radius:10px">
+        <button class="pillbtn primary" data-act="savePart">حفظ</button>
+        <button class="pillbtn danger" data-act="clearPart">مسح</button>
+      </div>
+
+      <div class="box no-print">
+        <h3>📎 الأداء المهامي (من ${sc.taskMax})${grading.currentTask.title ? " — المهمة: " + escapeHtml(grading.currentTask.title) : ""}</h3>
+        <div class="hintline">الحالة: ${escapeHtml(sc.taskStatus)}${grading.currentTask.autoFullOnSubmit ? " (التسليم يمنح الدرجة كاملة تلقائيًا ما لم تسجّل درجة يدويًا)" : ""}</div>
+        ${subs.length ? `<table style="margin-bottom:10px"><thead><tr><th>المهمة</th><th>الرابط/الملف</th><th>ملاحظة الطالب</th><th>التاريخ</th><th></th></tr></thead><tbody>${subRows}</tbody></table>` : `<div class="hintline">لم يسلّم الطالب المهمة عبر التطبيق.</div>`}
+        <input type="number" id="taskInput" min="0" max="${sc.taskMax}" step="0.5" value="${rec.taskScore ?? ""}" style="width:90px;padding:8px;border:1.5px solid var(--line);border-radius:10px">
+        <button class="pillbtn primary" data-act="saveTask">تسجيل الدرجة يدويًا</button>
+        <button class="pillbtn" data-act="clearTask">إلغاء التقييم اليدوي</button>
+      </div>
+
+      <h2 class="section">🎯 إتقان الأبواب المطلوبة (${rep.masteredCount} / ${rep.requiredCount})</h2>
+      <table>
+        <thead><tr><th>الموضوع</th><th>الحالة</th><th>درجة الاختبار</th><th>الواجب</th></tr></thead>
+        <tbody>${topicRows || `<tr><td colspan="4">لم تُحدَّد مواضيع محسوبة (من تبويب توزيع الدرجات).</td></tr>`}</tbody>
+      </table>
+
+      <h2 class="section">📋 السلوك والملاحظات</h2>
+      <div class="box no-print">
+        <div class="toolbar" style="margin:0">
+          <select id="bhType">${BH_TYPES.map(t => `<option value="${t.v}" ${editing && editing.type === t.v ? "selected" : ""}>${t.label}</option>`).join("")}</select>
+          <input type="date" id="bhDate" value="${escapeAttr(editing ? editing.date : todayISO())}">
+          <select id="bhPeriod"><option value="">الحصة…</option>${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${editing && String(editing.period) === String(n) ? "selected" : ""}>الحصة ${n}</option>`).join("")}</select>
+          <input type="text" id="bhNote" placeholder="ملاحظة / تفاصيل (اختياري)" value="${escapeAttr(editing ? editing.note || "" : "")}" style="flex:1;min-width:160px">
+          <button class="pillbtn primary" data-act="saveBh">${editing ? "💾 حفظ التعديل" : "➕ تسجيل"}</button>
+          ${editing ? `<button class="pillbtn" data-act="cancelBh">إلغاء</button>` : ""}
+        </div>
+      </div>
+      ${behaviors.length ? `<table><thead><tr><th>التاريخ</th><th>الحصة</th><th>النوع</th><th>الملاحظة</th><th class="no-print"></th></tr></thead><tbody>${bhRows}</tbody></table>`
+        : `<div class="empty">ما فيه سجلات سلوك لهذا الطالب.</div>`}
+    </div>`;
+  content.onclick = viewClick;
+}
+
+// ---------------- معالج أزرار ملفات الطلاب والدرجات ----------------
+async function viewClick(e) {
+  const b = e.target.closest ? e.target.closest("[data-act]") : null;
+  if (!b) return;
+  const act = b.dataset.act;
+  const st = state.openStudent ? studentsIndex[state.openStudent] : null;
+  try {
+    if (act === "open") { state.openStudent = b.dataset.key; state.editBh = ""; render(); return; }
+    if (act === "back") { state.openStudent = ""; state.editBh = ""; render(); return; }
+    if (act === "publishAll") { await publishAll(); if (state.showCodes) renderCodesTable(); return; }
+    if (act === "showCodes") { state.showCodes = true; render(); return; }
+    if (act === "hideCodes") { state.showCodes = false; render(); return; }
+    if (act === "copyRowMsg") {
+      const s2 = studentsIndex[b.dataset.key], r2 = s2 && records[studentRecKey(s2)];
+      if (!s2 || !r2) return;
+      const msg = parentMessage(s2, r2);
+      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(msg);
+      else prompt("انسخ الرسالة:", msg);
+      flash("تم نسخ رسالة " + s2.name + " ✅", true);
+      return;
+    }
+    if (act === "addStudent") { await addStudentManually(); return; }
+    if (act === "importRoster") { await importRosterBulk(); return; }
+    if (act === "bulkGrade") { await bulkGradeStudents(); return; }
+    if (act === "saveGrading") { await saveGrading(); return; }
+    if (act === "equalSplit") { syncGradingDraft(); gradingDraft.topicPoints = {}; render(); return; }
+    if (act === "resetDraft") { gradingDraft = null; render(); return; }
+    if (!st) return;
+
+    if (act === "setNumber") {
+      const num = normalizeNumber(document.getElementById("numInput").value || "");
+      if (!num) { flash("اكتب رقم الطالب أولًا", false); return; }
+      const rk = recKey(st.cls, num);
+      const alias = st.sessions[0] ? (st.sessions[0].decodedName || st.sessions[0].studentName) : st.name;
+      try {
+        const rec = { ...(records[rk] || {}), name: st.name, cls: st.cls, number: num, aliasName: alias, updatedAt: Date.now() };
+        await setDoc(doc(db, "student_records", rk), rec);
+        records[rk] = rec;
+        state.openStudent = `${st.cls}#${num}`;
+        rebuildAndRender();
+        flash("✅ تم حفظ رقم الطالب " + st.name + " — تقدر الحين تنشر تقريره", true);
+      } catch (e) { flash("تعذّر حفظ الرقم: " + (e.message || e), false); }
+      return;
+    }
+    if (act === "savePart") {
+      const v = document.getElementById("partInput").value;
+      if (v === "" || isNaN(Number(v)) || Number(v) < 0 || Number(v) > grading.partMax) { flash("أدخل درجة بين 0 و " + grading.partMax, false); return; }
+      if (await saveRecord(st, { participation: Number(v) })) { await publishIfPublished(st); render(); }
+    } else if (act === "clearPart") {
+      if (await saveRecord(st, { participation: null })) { await publishIfPublished(st); render(); }
+    } else if (act === "delTask") {
+      if (!confirm("حذف تسليم هذه المهمة نهائيًا؟")) return;
+      const sub = taskSubs.find(x => x.id === b.dataset.id);
+      if (sub?.fileUrl && window.firebase?.storage) { try { await firebase.storage().refFromURL(sub.fileUrl).delete(); } catch(e) { console.warn("storage delete", e); } }
+      await deleteDoc(doc(db, "task_submissions", b.dataset.id));
+      taskSubs = taskSubs.filter(x => x.id !== b.dataset.id);
+      await publishIfPublished(st);
+      render();
+    } else if (act === "saveTask") {
+      const v = document.getElementById("taskInput").value;
+      if (v === "" || isNaN(Number(v)) || Number(v) < 0 || Number(v) > grading.taskMax) { flash("أدخل درجة بين 0 و " + grading.taskMax, false); return; }
+      if (await saveRecord(st, { taskScore: Number(v) })) { await publishIfPublished(st); render(); }
+    } else if (act === "clearTask") {
+      if (await saveRecord(st, { taskScore: null })) { await publishIfPublished(st); render(); }
+    } else if (act === "saveBh") {
+      const type = document.getElementById("bhType").value;
+      const date = document.getElementById("bhDate").value || todayISO();
+      const period = document.getElementById("bhPeriod").value;
+      const note = document.getElementById("bhNote").value.trim();
+      const rk = studentRecKey(st);
+      const list = ((records[rk] || {}).behaviors || []).slice();
+      if (state.editBh) {
+        const i = list.findIndex(x => x.id === state.editBh);
+        if (i >= 0) list[i] = Object.assign({}, list[i], { type, date, period, note });
+      } else list.push({ id: newId(), type, date, period, note });
+      state.editBh = "";
+      if (await saveRecord(st, { behaviors: list })) { await publishIfPublished(st); render(); }
+    } else if (act === "editBh") { state.editBh = b.dataset.id; render(); }
+    else if (act === "cancelBh") { state.editBh = ""; render(); }
+    else if (act === "delBh") {
+      if (!confirm("حذف هذا السجل؟")) return;
+      const rk = studentRecKey(st);
+      const list = ((records[rk] || {}).behaviors || []).filter(x => x.id !== b.dataset.id);
+      if (await saveRecord(st, { behaviors: list })) { await publishIfPublished(st); render(); }
+    } else if (act === "publishOne") {
+      if (await publishStudent(st)) { render(); flash("✅ تم نشر تقرير الطالب. أرسل لولي الأمر رمز الدخول.", true); }
+    } else if (act === "copyMsg") {
+      const rec = records[studentRecKey(st)];
+      const msg = parentMessage(st, rec);
+      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(msg);
+      else prompt("انسخ الرسالة:", msg);
+      flash("تم نسخ الرسالة ✅", true);
+    } else if (act === "regenPin") {
+      if (!confirm("تجديد الرمز يُبطل الرمز القديم عند ولي الأمر. متابعة؟")) return;
+      const rk = studentRecKey(st), old = (records[rk] || {}).parentPin;
+      if (old) await deleteDoc(doc(db, "parent_reports", rk + "_" + old));
+      await saveRecord(st, { parentPin: generatePin() });
+      await publishStudent(st); render(); flash("✅ تم تجديد الرمز ونشر التقرير.", true);
+    }
+  } catch (err) {
+    console.error(err);
+    flash("تعذّر تنفيذ العملية. تأكد من الاتصال وصلاحيات قاعدة البيانات (firestore.rules).", false);
+  }
+}
+
+// لو كان تقرير الطالب منشورًا سابقًا، نحدّثه تلقائيًا بعد أي تعديل
+async function publishIfPublished(st) {
+  const rec = records[studentRecKey(st)];
+  if (rec && rec.parentPin) await publishStudent(st);
+}
+
+async function addStudentManually() {
+  const clsRaw = prompt("الفصل (رقم أو حرف، مثال: 6 أو أ):");
+  if (!clsRaw) return;
+  const numRaw = prompt("رقم الطالب في الكشف:");
+  if (!numRaw) return;
+  const name = prompt("اسم الطالب:");
+  if (!name) return;
+  const cls = canonicalizeClass(clsRaw) || clsRaw.trim();
+  const number = normalizeNumber(numRaw);
+  const rk = recKey(cls, number);
+  if (!number || !rk) { alert("رقم غير صالح."); return; }
+  const rec = Object.assign({}, records[rk] || {}, { name: name.trim(), cls, number, updatedAt: Date.now() });
+  await setDoc(doc(db, "student_records", rk), rec);
+  records[rk] = rec;
+  rebuildAndRender();
+  flash("✅ تمت إضافة الطالب.", true);
+}
+
+// ---------------- استيراد كشف الطلاب وإدخال الدرجات دفعة واحدة ----------------
+async function importRosterBulk() {
+  const raw = prompt("الصق كشف الطلاب، طالب في كل سطر بهذا الترتيب:\\nالفصل، رقم الطالب، اسم الطالب\\nمثال: 3، 12، أحمد محمد\\nيمكن استخدام الفاصلة أو علامة التبويب أو | للفصل بين الأعمدة.");
+  if (raw === null || !raw.trim()) return;
+  const lines = raw.split(/\\r?\\n/).map(x => x.trim()).filter(Boolean);
+  const parsed = [], errors = [];
+  lines.forEach((line, i) => {
+    const cols = line.includes("\\t") ? line.split("\\t") : line.includes("|") ? line.split("|") : line.split(/[،,]/);
+    if (cols.length < 3) { errors.push(i + 1); return; }
+    const cls = canonicalizeClass(cols[0]) || String(cols[0] || "").trim();
+    const number = normalizeNumber(cols[1]);
+    const name = cols.slice(2).join(" ").trim();
+    if (!cls || !number || !name || /^(الفصل|class)$/i.test(cls) || /^(الرقم|رقم الطالب|number)$/i.test(number)) return;
+    parsed.push({ cls, number, name });
+  });
+  if (!parsed.length) { alert("لم أجد صفوفًا صالحة. تأكد من ترتيب الأعمدة: الفصل، رقم الطالب، اسم الطالب."); return; }
+  const seen = new Set(), unique = [];
+  for (const st of parsed) {
+    const rk = recKey(st.cls, st.number);
+    if (seen.has(rk)) continue;
+    seen.add(rk); unique.push({ ...st, rk });
+  }
+  if (!confirm(`سيتم استيراد/تحديث ${unique.length} طالبًا. إذا كان الطالب موجودًا، ستبقى درجاته ورموزه محفوظة ويُحدّث الاسم فقط. متابعة؟`)) return;
+  let count = 0;
+  for (let i = 0; i < unique.length; i += 400) {
+    const batch = writeBatch(db);
+    unique.slice(i, i + 400).forEach(st => {
+      const old = records[st.rk] || {};
+      const rec = { ...old, name: st.name, cls: st.cls, number: st.number, updatedAt: Date.now() };
+      batch.set(doc(db, "student_records", st.rk), rec);
+      records[st.rk] = rec;
+      count++;
+    });
+    await batch.commit();
+  }
+  rebuildAndRender();
+  flash(`✅ تم استيراد ${count} طالبًا. يمكنك الآن مراجعة الكشف وتصدير رموز الأولياء.`, true);
+}
+
+async function bulkGradeStudents() {
+  const classInput = prompt("اكتب الفصل كما يظهر في القائمة (مثال: 3 أو أ):");
+  if (classInput === null || !classInput.trim()) return;
+  const cls = canonicalizeClass(classInput) || classInput.trim();
+  const category = prompt("أي درجة تريد تطبيقها على الفصل؟ اكتب: مشاركة أو أداء مهامي.\\nملاحظة: الاختبار والواجب محسوبان حاليًا من إتقان الموضوع.");
+  if (category === null) return;
+  const field = /^(مشاركة|المشاركة|part|participation)$/i.test(category.trim()) ? "participation"
+    : /^(أداء مهامي|الاداء المهامي|الأداء المهامي|مهمة|task|taskscore)$/i.test(category.trim()) ? "taskScore" : "";
+  if (!field) { alert("اختر «مشاركة» أو «أداء مهامي» فقط؛ الاختبار والواجب محسوبان من إتقان الموضوع في النظام الحالي."); return; }
+  const max = field === "participation" ? grading.partMax : grading.taskMax;
+  const valueRaw = prompt(`أدخل الدرجة من 0 إلى ${max}. ستُطبّق على جميع طلاب الفصل ${cls}.`);
+  if (valueRaw === null || valueRaw.trim() === "") return;
+  const value = Number(valueRaw);
+  if (!Number.isFinite(value) || value < 0 || value > max) { alert(`أدخل رقمًا من 0 إلى ${max}.`); return; }
+  const students = Object.values(studentsIndex).filter(st => st.number && st.cls === cls);
+  if (!students.length) { alert(`لم أجد طلابًا بأرقام في الفصل ${cls}.`); return; }
+  if (!confirm(`تأكيد: تسجيل ${value}/${max} في ${category} لعدد ${students.length} طالبًا في الفصل ${cls}؟ ستُستبدل الدرجة السابقة لهذا البند.`)) return;
+  for (let i = 0; i < students.length; i += 400) {
+    const batch = writeBatch(db);
+    students.slice(i, i + 400).forEach(st => {
+      const rk = studentRecKey(st), old = records[rk] || {};
+      const rec = { ...old, [field]: value, name: old.name || st.name, cls: st.cls, number: st.number, updatedAt: Date.now() };
+      batch.set(doc(db, "student_records", rk), rec);
+      records[rk] = rec;
+    });
+    await batch.commit();
+  }
+  // تحديث التقارير المنشورة مسبقًا فقط، من دون إنشاء رموز جديدة للطلاب غير المنشورين.
+  for (const st of students) {
+    const rec = records[studentRecKey(st)];
+    if (rec && rec.parentPin) {
+      await setDoc(doc(db, "parent_reports", studentRecKey(st) + "_" + rec.parentPin), reportPayload(st, rec));
+    }
+  }
+  rebuildAndRender();
+  flash(`✅ تم تسجيل الدرجة لـ ${students.length} طالبًا في الفصل ${cls}.`, true);
+}
+
+// ---------------- 👨‍👩‍👦 إشعار الأولياء ----------------
+function renderParentsView(){
+  const students = getFilteredStudents().filter(st => st.number).sort((a,b)=>a.cls.localeCompare(b.cls,'ar',{numeric:true}) || (Number(a.number)||9999)-(Number(b.number)||9999));
+  const rows = students.map(st=>{
+    const rec=records[studentRecKey(st)]||{};
+    const pin=rec.parentPin||'—';
+    return `<tr><td>${escapeHtml(st.number||'—')}</td><td>${escapeHtml(st.name)}</td><td>${escapeHtml(st.cls)}</td><td><b style="letter-spacing:2px">${escapeHtml(pin)}</b></td><td>${rec.parentPin?'<span class="pill good">منشور</span>':'<span class="pill mid">غير منشور</span>'}</td><td class="no-print"><button class="pillbtn primary small" data-act="parentPublish" data-key="${escapeAttr(st.key)}">${rec.parentPin?'🔄 تحديث':'📤 نشر'}</button> <button class="pillbtn small" data-act="parentCopy" data-key="${escapeAttr(st.key)}">📋 رسالة</button></td></tr>`;
+  }).join('');
+  content.innerHTML=`<div class="box"><h2 class="section">👨‍👩‍👦 إشعار الأولياء</h2><div class="hintline">لكل طالب رمز خاص. لا يُعرض التقرير إلا عند إدخال الفصل + رقم الطالب + الرمز.</div><table><thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>رمز ولي الأمر</th><th>الحالة</th><th class="no-print">إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">لا يوجد طلاب بأرقام.</td></tr>'}</tbody></table></div>`;
+  content.onclick=async e=>{
+    const b=e.target.closest('[data-act]'); if(!b)return; const st=studentsIndex[b.dataset.key]; if(!st)return; const act=b.dataset.act;
+    if(act==='parentPublish'){ if(await publishStudent(st)){ render(); flash('✅ تم نشر/تحديث تقرير '+st.name,true); } }
+    if(act==='parentCopy'){ const rec=records[studentRecKey(st)]; if(!rec?.parentPin) { await publishStudent(st); } const msg=parentMessage(st,records[studentRecKey(st)]); if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(msg); else prompt('انسخ الرسالة:',msg); flash('تم نسخ رسالة ولي الأمر ✅',true); }
+  };
+}
+
+// ---------------- 📚 خطة المنهج والتحكم المركزي ----------------
+let curriculumDraft = null;
+const ADMIN_EMAIL = "mohfox2@hotmail.com";
+const DEFAULT_APP_SETTINGS = {
+  settingsVersion: 3, practiceDisabledTopics: [], examDisabledTopics: [], practiceOnlyMode: false,
+  announcement: "", subjectName: "مدرّب منهج العلوم", gradeLabel: "الصف الثاني المتوسط",
+  teacherName: "", termLabel: "", monthlyPlan: {label:"", topics:[], locked:true}, classes: []
+};
+async function loadAppSettingsDraft(){
+  const d = await getDoc(doc(db, "app_config", "settings"));
+  const x = d.exists() ? d.data() : {};
+  curriculumDraft = Object.assign({}, DEFAULT_APP_SETTINGS, x);
+  curriculumDraft.monthlyPlan = Object.assign({label:"",topics:[],locked:true}, x.monthlyPlan || {});
+  curriculumDraft.monthlyPlan.topics = [...new Set((curriculumDraft.monthlyPlan.topics || []).map(Number).filter(i=>i>=0 && i<TOPIC_TITLES.length))];
+  return curriculumDraft;
+}
+function currEnabled(i, mode){
+  const c = curriculumDraft || DEFAULT_APP_SETTINGS;
+  const disabled = mode === 'exam' ? (c.examDisabledTopics||[]) : (c.practiceDisabledTopics||[]);
+  if(disabled.includes(i)) return false;
+  // المطلوب الآن لا يقيّد إتاحة التدريب أو الاختبار.
+  return true;
+}
+async function renderCurriculumView(){
+  try { if(!curriculumDraft) await loadAppSettingsDraft(); } catch(e){ content.innerHTML='<div class="empty">تعذّر تحميل إعدادات المنهج.</div>'; return; }
+  const c=curriculumDraft, plan=new Set(c.monthlyPlan.topics||[]);
+  const rows=TOPIC_TITLES.map((t,i)=>`<tr><td>${escapeHtml(t)}</td><td><input type="checkbox" data-curr-pr="${i}" ${(c.practiceDisabledTopics||[]).includes(i)?'':'checked'}></td><td><input type="checkbox" data-curr-ex="${i}" ${(c.examDisabledTopics||[]).includes(i)?'':'checked'}></td><td><input type="checkbox" data-curr-plan="${i}" ${plan.has(i)?'checked':''}></td></tr>`).join('');
+  content.innerHTML=`<div class="box"><h2 class="section">📚 خطة المنهج والتحكم المركزي</h2><div class="hintline">التدريب والاختبار والمطلوب الآن قوائم مستقلة.</div>
+    <div class="rowbtns"><label>اسم الخطة <input id="cvLabel" value="${escapeAttr(c.monthlyPlan.label||'')}" style="padding:8px;border:1px solid var(--line);border-radius:9px"></label>
+    <label><input id="cvPracticeOnly" type="checkbox" ${c.practiceOnlyMode?'checked':''}> تدريب فقط</label></div>
+    <table><thead><tr><th>الموضوع</th><th>🧠 تدريب</th><th>📝 اختبار</th><th>📅 مطلوب الآن</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="box" style="margin-top:14px"><h3>📢 الإعلان</h3><textarea id="cvAnn" rows="2" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:9px">${escapeHtml(c.announcement||'')}</textarea></div>
+    <button class="pillbtn primary" id="saveCurr">💾 حفظ خطة المنهج والإعدادات</button><div id="currMsg" class="msg-inline"></div></div>`;
+  content.querySelector('#saveCurr').onclick=saveCurriculum;
+}
+async function saveCurriculum(){
+  const c=curriculumDraft;
+  c.settingsVersion=3;
+  c.monthlyPlan.label=document.getElementById('cvLabel').value.trim();
+  c.monthlyPlan.locked=false; // للتوافق مع الإعدادات القديمة فقط
+  c.practiceOnlyMode=document.getElementById('cvPracticeOnly').checked;
+  c.announcement=document.getElementById('cvAnn').value.trim();
+  c.practiceDisabledTopics=[]; c.examDisabledTopics=[]; c.monthlyPlan.topics=[];
+  TOPIC_TITLES.forEach((_,i)=>{ if(!document.querySelector(`[data-curr-pr="${i}"]`).checked)c.practiceDisabledTopics.push(i); if(!document.querySelector(`[data-curr-ex="${i}"]`).checked)c.examDisabledTopics.push(i); if(document.querySelector(`[data-curr-plan="${i}"]`).checked)c.monthlyPlan.topics.push(i); });
+  const msg=document.getElementById('currMsg'); msg.textContent='جارٍ الحفظ…'; msg.className='msg-inline';
+  try{ await setDoc(doc(db,'app_config','settings'),{...c,updatedAt:serverTimestamp()}); msg.textContent='✅ تم الحفظ وتطبيق الخطة مركزيًا على جميع الطلاب.'; msg.className='msg-inline ok'; }
+  catch(e){ console.error(e); msg.textContent='تعذّر الحفظ. تأكد من صلاحيات Firestore.'; msg.className='msg-inline err'; }
+}
+
+// ---------------- ⚙️ توزيع الدرجات ----------------
+function syncGradingDraft() {
+  if (!gradingDraft) return;
+  const num = (id, def) => { const el = document.getElementById(id); const v = el ? parseFloat(el.value) : NaN; return isNaN(v) || v < 0 ? def : v; };
+  gradingDraft.testMax = num("gTest", gradingDraft.testMax);
+  gradingDraft.hwMax = num("gHw", gradingDraft.hwMax);
+  gradingDraft.partMax = num("gPart", gradingDraft.partMax);
+  gradingDraft.taskMax = num("gTask", gradingDraft.taskMax);
+  const t = document.getElementById("gTaskTitle");
+  if (t) gradingDraft.currentTask.title = t.value.trim();
+  const a = document.getElementById("gAuto");
+  if (a) gradingDraft.currentTask.autoFullOnSubmit = a.checked;
+  const hm = document.getElementById("gHwMode");
+  if (hm) gradingDraft.hwMode = hm.value;
+  const s = document.getElementById("gShowBh");
+  if (s) gradingDraft.showBehaviorToParents = s.checked;
+  const inputs = document.querySelectorAll("[data-gpoints]");
+  if (inputs.length) {
+    const pts = {};
+    inputs.forEach(inp => {
+      if (inp.value !== "" && !isNaN(parseFloat(inp.value))) pts[inp.dataset.gpoints] = parseFloat(inp.value);
+    });
+    gradingDraft.topicPoints = pts;
+  }
+}
+
+function renderGradingView() {
+  if (!gradingDraft) gradingDraft = JSON.parse(JSON.stringify(grading));
+  const d = gradingDraft;
+  const scored = new Set(d.scoredTopics);
+  const eq = d.scoredTopics.length ? Math.round((d.testMax / d.scoredTopics.length) * 100) / 100 : 0;
+  const sum = Math.round(d.scoredTopics.reduce((a, i) => a + topicTestPoints(d, i), 0) * 100) / 100;
+  const warn = d.scoredTopics.length && Math.abs(sum - d.testMax) > 0.01
+    ? `<div class="msg-inline err" style="display:block">⚠️ مجموع درجات المواضيع (${sum}) لا يساوي درجة الاختبار (${d.testMax}).</div>` : "";
+
+  const rows = TOPIC_TITLES.map((t, i) => {
+    const on = scored.has(i);
+    const custom = d.topicPoints[i];
+    return `<tr><td><label style="cursor:pointer"><input type="checkbox" data-gtopic="${i}" ${on ? "checked" : ""}> ${escapeHtml(t)}</label></td>
+      <td>${on ? `<input type="number" step="0.25" min="0" data-gpoints="${i}" value="${custom ?? ""}" placeholder="${eq}" style="width:80px;padding:6px;border:1.5px solid var(--line);border-radius:8px">` : "—"}</td></tr>`;
+  }).join("");
+
+  const numIn = (id, label, val) => `<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700">${label}
+    <input type="number" id="${id}" min="0" step="0.5" value="${val}" style="width:110px;padding:8px;border:1.5px solid var(--line);border-radius:10px"></label>`;
+
+  content.innerHTML = `
+    <div class="box">
+      <h3>⚙️ توزيع الدرجات (الافتراضي: 10 اختبار + 10 واجب + 10 مشاركة + 20 أداء = 50)</h3>
+      <div class="rowbtns" style="gap:14px">
+        ${numIn("gTest", "الاختبارات", d.testMax)}${numIn("gHw", "الواجبات", d.hwMax)}
+        ${numIn("gPart", "المشاركة", d.partMax)}${numIn("gTask", "الأداء المهامي", d.taskMax)}
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>📚 طريقة حساب الواجبات (من ${d.hwMax})</h3>
+      <select id="gHwMode" style="padding:10px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit">
+        <option value="solved" ${d.hwMode !== "mastered" ? "selected" : ""}>من المواضيع المحلولة (يُحسب الواجب لكل موضوع أجاب الطالب على كل أسئلته، حتى لو لم يتقنها)</option>
+        <option value="mastered" ${d.hwMode === "mastered" ? "selected" : ""}>من المواضيع المتقنة فقط</option>
+      </select>
+      <div class="hintline" style="margin-top:6px">الاختبار يُحسب دائمًا من الإتقان. الواجبات توزَّع بالتساوي على المواضيع المحسوبة أدناه.</div>
+    </div>
+
+    <div class="box">
+      <h3>📎 الأداء المهامي</h3>
+      <input type="text" id="gTaskTitle" placeholder="عنوان المهمة الحالية (مثال: بحث عن دورة الماء)" value="${escapeAttr(d.currentTask.title || "")}"
+        style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px;margin-bottom:8px">
+      <label style="cursor:pointer;font-size:13.5px"><input type="checkbox" id="gAuto" ${d.currentTask.autoFullOnSubmit ? "checked" : ""}> منح الدرجة كاملة تلقائيًا عند تسليم الطالب (ويمكنك تعديلها يدويًا)</label>
+      <div class="hintline" style="margin-top:6px">يظهر عنوان المهمة للطلاب داخل التطبيق في زر «تسليم المهمة». اتركه فارغًا لإخفاء الزر.</div>
+    </div>
+
+    <div class="box">
+      <h3>👨‍👩‍👦 تقرير ولي الأمر</h3>
+      <label style="cursor:pointer;font-size:13.5px"><input type="checkbox" id="gShowBh" ${d.showBehaviorToParents ? "checked" : ""}> إظهار سجل السلوك والملاحظات لولي الأمر</label>
+    </div>
+
+    <h2 class="section">📚 المواضيع المحسوبة بالدرجات (${d.scoredTopics.length})</h2>
+    <div class="hintline">الدرجة الافتراضية لكل موضوع = درجة الاختبار ÷ عدد المواضيع (${eq}). اكتب رقمًا لتغيير درجة موضوع معيّن. الواجبات توزَّع بالتساوي على نفس المواضيع (حسب الطريقة المختارة أعلاه).</div>
+    ${warn}
+    <table><thead><tr><th>الموضوع (ضع ✓ ليُحسب)</th><th>درجته في الاختبار</th></tr></thead><tbody>${rows}</tbody></table>
+
+    <div class="rowbtns" style="margin-top:14px">
+      <button class="pillbtn primary" data-act="saveGrading">💾 حفظ توزيع الدرجات</button>
+      <button class="pillbtn" data-act="equalSplit">⚖️ توزيع متساوٍ</button>
+      <button class="pillbtn" data-act="resetDraft">تراجع عن التعديلات</button>
+    </div>
+    <div id="filesMsg" class="msg-inline" style="display:none;margin-top:8px"></div>`;
+
+  content.onclick = viewClick;
+  content.onchange = (e) => {
+    if (e.target.matches && e.target.matches("[data-gtopic]")) {
+      syncGradingDraft();
+      const i = Number(e.target.dataset.gtopic);
+      const set = new Set(gradingDraft.scoredTopics);
+      if (e.target.checked) set.add(i); else { set.delete(i); delete gradingDraft.topicPoints[i]; }
+      gradingDraft.scoredTopics = [...set].sort((a, b) => a - b);
+      renderGradingView();
+    }
+  };
+}
+
+async function saveGrading() {
+  syncGradingDraft();
+  const g = normalizeGrading(gradingDraft);
+  await setDoc(doc(db, "app_config", "grading"), g);
+  grading = g;
+  gradingDraft = null;
+  renderGradingView();
+  flash("✅ تم حفظ توزيع الدرجات. اضغط «نشر تقارير أولياء الأمور» من تبويب ملفات الطلاب لتحديثها.", true);
+}
+
+
+// ---------------- 📊 تقدم الفصل: نسبة إتقان كل موضوع داخل كل فصل ----------------
+function renderClassProgressView() {
+  const students = getFilteredStudents();
+  if (!students.length) {
+    content.innerHTML = `<div class="empty">ما فيه نتائج مطابقة للفلاتر الحالية.</div>`;
+    return;
+  }
+
+  // تجميع حسب الفصل
+  const byClass = {};
+  students.forEach(st => {
+    if (!byClass[st.cls]) byClass[st.cls] = [];
+    byClass[st.cls].push(st);
+  });
+
+  const classCards = Object.keys(byClass).sort((a, b) => a.localeCompare(b, "ar")).map(cls => {
+    const clsStudents = byClass[cls];
+    const total = clsStudents.length;
+
+    // لكل طالب، مجموعة الأبواب المتقنة (اتحاد كل جلساته)
+    const masteredByStudent = clsStudents.map(st => {
+      const set = new Set();
+      st.sessions.forEach(s => (s.mastered || []).forEach(m => set.add(m)));
+      return set;
+    });
+
+    // كل الأبواب اللي ظهرت لأي طالب بهذا الفصل
+    const allChapters = new Set();
+    masteredByStudent.forEach(set => set.forEach(ch => allChapters.add(ch)));
+
+    const notStarted = clsStudents.filter(st => st.sessions.length === 0).length;
+
+    const chapterRows = [...allChapters].sort((a, b) => a.localeCompare(b, "ar")).map(ch => {
+      const count = masteredByStudent.filter(set => set.has(ch)).length;
+      const pct = total ? Math.round((count / total) * 100) : 0;
+      const cls2 = pct >= 75 ? "good" : pct >= 40 ? "mid" : "low";
+      return `<tr>
+        <td>${escapeHtml(ch)}</td>
+        <td>${count} / ${total}</td>
+        <td><span class="pill ${cls2}">${pct}%</span></td>
+      </tr>`;
+    }).join("");
+
+    return `
+      <div class="box">
+        <h3>الفصل ${escapeHtml(cls)} — ${total} طالب</h3>
+        ${notStarted ? `<div class="hintline">⚠️ ${notStarted} طالب ما بدأ أي جلسة بعد</div>` : ""}
+        ${allChapters.size ? `
+        <table>
+          <thead><tr><th>الباب</th><th>عدد المتقنين</th><th>النسبة</th></tr></thead>
+          <tbody>${chapterRows}</tbody>
+        </table>` : `<div class="empty">ما فيه أي باب متقن بالكامل بعد بهذا الفصل.</div>`}
+      </div>`;
+  }).join("");
+
+  content.innerHTML = `<div id="exportArea"><h2 class="section">📊 تقدم الفصل حسب كل باب</h2>${classCards}</div>`;
+}
+
+// ---------------- 📤 التقارير: أصعب المواضيع + طلاب يحتاجون متابعة ----------------
+function renderReportsView() {
+  const students = getFilteredStudents();
+  if (!students.length) {
+    content.innerHTML = `<div class="empty">ما فيه نتائج مطابقة للفلاتر الحالية.</div>`;
+    return;
+  }
+
+  // كل جلسة فيها دقة منخفضة = مؤشر صعوبة على مواضيعها (نعتمد هنا فقط على المتقن/غير متقن لعدم توفر ربط سؤال-بباب)
+  const totalStudents = students.length;
+  const masteredCountByChapter = {};
+  students.forEach(st => {
+    const set = new Set();
+    st.sessions.forEach(s => (s.mastered || []).forEach(m => set.add(m)));
+    set.forEach(ch => { masteredCountByChapter[ch] = (masteredCountByChapter[ch] || 0) + 1; });
+  });
+
+  const hardest = Object.keys(masteredCountByChapter)
+    .map(ch => ({ ch, pct: Math.round((masteredCountByChapter[ch] / totalStudents) * 100) }))
+    .sort((a, b) => a.pct - b.pct)
+    .slice(0, 10);
+
+  const hardestRows = hardest.map(h => `
+    <tr><td>${escapeHtml(h.ch)}</td><td><span class="pill ${h.pct>=75?'good':h.pct>=40?'mid':'low'}">${h.pct}%</span></td></tr>
+  `).join("");
+
+  // طلاب يحتاجون متابعة: دقة إجمالية أقل من 50% أو ما سجلوا أي جلسة
+  const needsFollowUp = students.map(st => {
+    const totalQ = st.sessions.reduce((a, s) => a + (s.total || 0), 0);
+    const totalC = st.sessions.reduce((a, s) => a + (s.correct || 0), 0);
+    const acc = totalQ ? Math.round((totalC / totalQ) * 100) : null;
+    return { st, acc, sessions: st.sessions.length };
+  }).filter(x => x.sessions === 0 || (x.acc !== null && x.acc < 50))
+    .sort((a, b) => (a.acc ?? -1) - (b.acc ?? -1));
+
+  const followRows = needsFollowUp.map(x => `
+    <tr>
+      <td>${escapeHtml(x.st.name)}</td>
+      <td>${escapeHtml(x.st.cls)}</td>
+      <td>${x.sessions}</td>
+      <td>${x.acc === null ? "لم يبدأ بعد" : accuracyPill(x.acc, 100)}</td>
+    </tr>`).join("");
+
+  content.innerHTML = `
+    <div id="exportArea">
+      <h2 class="section">📤 أصعب 10 أبواب (الأقل نسبة إتقان)</h2>
+      ${hardest.length ? `
+      <table>
+        <thead><tr><th>الباب</th><th>نسبة الإتقان بين كل الطلاب الظاهرين</th></tr></thead>
+        <tbody>${hardestRows}</tbody>
+      </table>` : `<div class="empty">ما فيه بيانات كافية بعد.</div>`}
+
+      <h2 class="section">📤 طلاب يحتاجون متابعة</h2>
+      <div class="hintline">(دقة إجمالية أقل من 50%، أو ما بدأوا أي جلسة بعد)</div>
+      ${needsFollowUp.length ? `
+      <table>
+        <thead><tr><th>الطالب</th><th>الفصل</th><th>الجلسات</th><th>الدقة</th></tr></thead>
+        <tbody>${followRows}</tbody>
+      </table>` : `<div class="empty">👍 ما فيه طلاب يحتاجون متابعة حاليًا حسب هذا المعيار.</div>`}
+    </div>`;
+}
+
+function renderAllView() {
+  const students = getFilteredStudents();
+
+  if (!students.length) {
+    content.innerHTML = `<div class="empty">ما فيه نتائج مطابقة للفلاتر الحالية.</div>`;
+    return;
+  }
+
+  const summaryRows = students.map(st => {
+    const totalQ = st.sessions.reduce((a, s) => a + (s.total || 0), 0);
+    const totalC = st.sessions.reduce((a, s) => a + (s.correct || 0), 0);
+    const masteredSet = new Set(); st.sessions.forEach(s => (s.mastered || []).forEach(m => masteredSet.add(m)));
+    return `
+      <tr class="clickable ${state.focusKey === st.key ? "focused" : ""}" data-key="${escapeAttr(st.key)}">
+        <td>${escapeHtml(st.name)}</td>
+        <td>${escapeHtml(st.rosterNumber || "—")}</td>
+        <td>${escapeHtml(st.cls)}</td>
+        <td>${st.sessions.length}</td>
+        <td>${totalQ}</td>
+        <td>${accuracyPill(totalC, totalQ)}</td>
+        <td>${masteredSet.size ? masteredSet.size + " باب" : "لا يوجد باب متقن بالكامل بعد"}</td>
+        <td class="no-print"><button class="pillbtn danger small" data-del-student="${escapeAttr(st.key)}" title="حذف هذا الطالب وكل جلساته">🗑️</button></td>
+      </tr>`;
+  }).join("");
+
+  const allSessions = [];
+  students.forEach(st => st.sessions.forEach(s => allSessions.push({ st, s })));
+  allSessions.sort((a, b) => (b.s.decodedTimestamp || "").localeCompare(a.s.decodedTimestamp || ""));
+
+  const sessionRows = allSessions.map(({ st, s }, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(st.name)}</td>
+      <td>${escapeHtml(st.rosterNumber || "—")}</td>
+      <td>${escapeHtml(st.cls)}</td>
+      <td>${formatTimestamp(s.decodedTimestamp)}</td>
+      <td>${s.correct || 0}/${s.total || 0} (${s.total ? Math.round((s.correct / s.total) * 100) : 0}%)</td>
+      <td>${s.minutes || 0} د</td>
+      <td>${(s.mastered && s.mastered.length) ? s.mastered.join("، ") : "—"}</td>
+      <td>✅</td>
+      <td class="no-print">${s.source === "db" && s.id ? `<button class="pillbtn danger small" data-del-session="${escapeAttr(s.id)}" data-del-key="${escapeAttr(st.key)}" title="حذف هذه الجلسة فقط">🗑️</button>` : `<span class="none" title="رمز تحقق يدوي، غير محفوظ أصلاً">يدوي</span>`}</td>
+    </tr>`).join("");
+
+  content.innerHTML = `
+    <div id="exportArea">
+      <h2 class="section">ملخص الطلاب</h2>
+      <table id="summaryTable">
+        <thead><tr>
+          <th>الطالب</th><th>رقم الطالب</th><th>الفصل</th><th>الجلسات</th>
+          <th>عدد الأسئلة</th><th>الدقة</th><th>الأبواب المتقنة</th><th class="no-print"></th>
+        </tr></thead>
+        <tbody>${summaryRows}</tbody>
+      </table>
+
+      <h2 class="section">تفاصيل الجلسات</h2>
+      <table id="sessionsTable">
+        <thead><tr>
+          <th>#</th><th>الطالب</th><th>رقم الطالب</th><th>الفصل</th><th>الوقت</th>
+          <th>النتيجة</th><th>المدة</th><th>الأبواب المتقنة</th><th></th><th class="no-print"></th>
+        </tr></thead>
+        <tbody>${sessionRows}</tbody>
+      </table>
+    </div>
+  `;
+
+  content.querySelectorAll("tr.clickable[data-key]").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("[data-del-student]")) return; // لا تفعّل التركيز عند الضغط على زر الحذف
+      state.focusKey = state.focusKey === row.dataset.key ? "" : row.dataset.key;
+      render();
+    });
+  });
+
+  content.querySelectorAll("[data-del-student]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteStudent(btn.dataset.delStudent);
+    });
+  });
+  content.querySelectorAll("[data-del-session]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteSession(btn.dataset.delSession, btn.dataset.delKey);
+    });
+  });
+}
+
+// ---------------- الحذف ----------------
+async function deleteStudent(key) {
+  const st = studentsIndex[key];
+  if (!st) return;
+  const ok = confirm(`متأكد تبي تحذف الطالب «${st.name}» وكل جلساته (${st.sessions.length})؟ هذا الإجراء لا يمكن التراجع عنه.`);
+  if (!ok) return;
+
+  const dbIds = st.sessions.filter(s => s.source === "db" && s.id).map(s => s.id);
+  try {
+    if (dbIds.length) {
+      const batch = writeBatch(db);
+      dbIds.forEach(id => batch.delete(doc(db, "submissions", id)));
+      await batch.commit();
+    }
+    dbSubs = dbSubs.filter(s => !dbIds.includes(s.id));
+    manualSubs = manualSubs.filter(s => {
+      const cls = canonicalizeClass(s.decodedClass || s.studentClass || "") || "غير محدد";
+      const num = normalizeNumber(s.decodedStudentNumber || s.rosterNumber || "");
+      const k = num ? `${cls}#${num}` : `${cls}#${s.decodedName || s.studentName}`;
+      return k !== key;
+    });
+    // حذف سجل الطالب وتقرير ولي أمره أيضًا
+    const rkDel = st.number ? recKey(st.cls, st.number) : "";
+    if (rkDel && records[rkDel]) {
+      const recDel = records[rkDel];
+      await deleteDoc(doc(db, "student_records", rkDel));
+      if (recDel.parentPin) await deleteDoc(doc(db, "parent_reports", rkDel + "_" + recDel.parentPin));
+      delete records[rkDel];
+    }
+    if (state.focusKey === key) state.focusKey = "";
+    rebuildAndRender();
+  } catch (err) {
+    console.error(err);
+    alert("تعذّر حذف الطالب. تأكد من الاتصال وحاول مرة أخرى.");
+  }
+}
+
+async function deleteSession(docId, key) {
+  const ok = confirm("متأكد تبي تحذف هذي الجلسة فقط؟");
+  if (!ok) return;
+  try {
+    await deleteDoc(doc(db, "submissions", docId));
+    dbSubs = dbSubs.filter(s => s.id !== docId);
+    rebuildAndRender();
+  } catch (err) {
+    console.error(err);
+    alert("تعذّر حذف الجلسة. تأكد من الاتصال وحاول مرة أخرى.");
+  }
+}
+
+document.getElementById("deleteAllBtn").addEventListener("click", async () => {
+  if (!dbSubs.length && !Object.keys(records).length) { alert("ما فيه بيانات محفوظة للحذف."); return; }
+  const typed = prompt(`سيتم حذف كل الطلاب وجلساتهم وسجلاتهم ودرجاتهم وتقارير أولياء الأمور نهائيًا من كل الفصول (${dbSubs.length} جلسة). للتأكيد، اكتب كلمة "حذف" بالضبط:`);
+  if (typed !== "حذف") { if (typed !== null) alert("لم تتم كتابة الكلمة بشكل صحيح، تم الإلغاء."); return; }
+  try {
+    const ids = dbSubs.map(s => s.id);
+    const CHUNK = 450; // حد أقصى آمن لكل batch في Firestore
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      ids.slice(i, i + CHUNK).forEach(id => batch.delete(doc(db, "submissions", id)));
+      await batch.commit();
+    }
+    // سجلات الطلاب وتقارير أولياء الأمور
+    const recIds = Object.keys(records);
+    const delRefs = [];
+    recIds.forEach(k => {
+      delRefs.push(doc(db, "student_records", k));
+      if (records[k].parentPin) delRefs.push(doc(db, "parent_reports", k + "_" + records[k].parentPin));
+    });
+    for (let i = 0; i < delRefs.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      delRefs.slice(i, i + CHUNK).forEach(r => batch.delete(r));
+      await batch.commit();
+    }
+    records = {};
+    dbSubs = [];
+    manualSubs = [];
+    state.focusKey = "";
+    state.openStudent = "";
+    rebuildAndRender();
+    alert("تم حذف جميع الطلاب والجلسات وسجلاتهم.");
+  } catch (err) {
+    console.error(err);
+    alert("تعذّر حذف البيانات بالكامل. حاول مرة أخرى، أو احذف الطلاب واحدًا واحدًا.");
+  }
+});
+
+function renderChaptersView() {
+  const students = getFilteredStudents();
+  const chapterMap = {}; // chapterLabel -> [studentNames]
+  students.forEach(st => {
+    const set = new Set(); st.sessions.forEach(s => (s.mastered || []).forEach(m => set.add(m)));
+    set.forEach(ch => {
+      if (!chapterMap[ch]) chapterMap[ch] = [];
+      chapterMap[ch].push(st.name);
+    });
+  });
+  const chapters = Object.keys(chapterMap).sort((a, b) => a.localeCompare(b, "ar"));
+
+  if (!chapters.length) {
+    content.innerHTML = `<div class="empty">ما فيه أي باب متقن بالكامل بعد لدى الطلاب الحاليين.</div>`;
+    return;
+  }
+
+  content.innerHTML = `
+    <div id="exportArea">
+      <h2 class="section">الأبواب حسب الإتقان</h2>
+      ${chapters.map(ch => `
+        <div class="chapterCard">
+          <div class="title">📕 ${escapeHtml(ch)} — ${chapterMap[ch].length} طالب</div>
+          <div>${chapterMap[ch].map(n => `<span class="chip">${escapeHtml(n)}</span>`).join(" ")}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+// ---------------- التصدير ----------------
+document.getElementById("exportPrint").addEventListener("click", () => window.print());
+
+document.getElementById("exportCsv").addEventListener("click", () => {
+  const table = document.getElementById("summaryTable");
+  if (!table) { alert("ما فيه جدول للتصدير حاليًا."); return; }
+  let csv = "\uFEFF";
+  table.querySelectorAll("tr").forEach(tr => {
+    const cells = [...tr.children].map(td => `"${td.innerText.replace(/"/g, '""')}"`);
+    csv += cells.join(",") + "\r\n";
+  });
+  downloadBlob(csv, "text/csv;charset=utf-8", "ملخص_الطلاب.csv");
+});
+
+document.getElementById("exportWord").addEventListener("click", () => {
+  const area = document.getElementById("exportArea");
+  if (!area) { alert("ما فيه محتوى للتصدير حاليًا."); return; }
+  const html = `
+    <html dir="rtl"><head><meta charset="utf-8"><style>
+      body{font-family:Tahoma,Arial;font-size:13px}
+      table{border-collapse:collapse;width:100%;margin-bottom:20px}
+      th,td{border:1px solid #999;padding:6px 8px;text-align:right}
+      th{background:#eef5f4}
+    </style></head><body>${area.innerHTML}</body></html>`;
+  downloadBlob(html, "application/msword", "تقرير_الطلاب.doc");
+});
+
+document.getElementById("exportPdf").addEventListener("click", () => {
+  const area = document.getElementById("exportArea");
+  if (!area) { alert("ما فيه محتوى للتصدير حاليًا."); return; }
+  if (typeof html2pdf === "undefined") { alert("تعذّر تحميل أداة PDF، جرّب الطباعة بدلاً منها."); return; }
+  html2pdf().set({
+    margin: 10,
+    filename: "تقرير_الطلاب.pdf",
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
+  }).from(area).save();
+});
+
+function downloadBlob(content, mime, filename) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------- أدوات مساعدة ----------------
+function escapeHtml(str) {
+  return (str ?? "").toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function escapeAttr(str) { return escapeHtml(str).replace(/"/g, "&quot;"); }
+</script>
+</body>
+</html>
