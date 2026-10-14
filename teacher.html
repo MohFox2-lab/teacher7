@@ -354,9 +354,13 @@ document.getElementById("resetFocusBtn").addEventListener("click", () => {
 function rebuildAndRender() {
   const all = dbSubs.concat(manualSubs);
   studentsIndex = {};
+  const aliasMap = {};
+  Object.values(records).forEach(r => {
+    if (r && r.aliasName && r.number) aliasMap[(canonicalizeClass(r.cls || "") || "غير محدد") + "#" + r.aliasName] = normalizeNumber(r.number);
+  });
   for (const s of all) {
     const cls = canonicalizeClass(s.decodedClass || s.studentClass || "") || "غير محدد";
-    const number = normalizeNumber(s.decodedStudentNumber || s.rosterNumber || "");
+    const number = normalizeNumber(s.decodedStudentNumber || s.rosterNumber || "") || aliasMap[`${cls}#${s.decodedName || s.studentName}`] || "";
     const key = number ? `${cls}#${number}` : `${cls}#${s.decodedName || s.studentName}`;
     if (!studentsIndex[key]) {
       studentsIndex[key] = {
@@ -670,6 +674,12 @@ function renderStudentDetail(key) {
       <div id="filesMsg" class="msg-inline" style="display:none"></div>
       <h2 class="section">${escapeHtml(st.name)} — الفصل ${escapeHtml(st.cls)} — رقم ${escapeHtml(st.number || "—")}</h2>
 
+      ${st.number ? "" : `<div class="box no-print" style="border:2px solid #f59e0b">
+        <h3>⚠️ هذا الطالب بدون رقم — لا يمكن إنشاء رمز ولي الأمر له</h3>
+        <div class="hintline">اكتب رقم الطالب هنا واحفظ، فيظهر في «إشعار الأولياء» وتقدر تنشر تقريره.</div>
+        <input type="number" id="numInput" min="1" style="width:110px;padding:8px;border:1.5px solid var(--line);border-radius:10px">
+        <button class="pillbtn primary" data-act="setNumber">💾 حفظ الرقم</button>
+      </div>`}
       <div class="box">
         <h3>⭐ الدرجة الحالية: ${sc.total} / ${sc.max}</h3>
         <table>
@@ -749,6 +759,21 @@ async function viewClick(e) {
     if (act === "resetDraft") { gradingDraft = null; render(); return; }
     if (!st) return;
 
+    if (act === "setNumber") {
+      const num = normalizeNumber(document.getElementById("numInput").value || "");
+      if (!num) { flash("اكتب رقم الطالب أولًا", false); return; }
+      const rk = recKey(st.cls, num);
+      const alias = st.sessions[0] ? (st.sessions[0].decodedName || st.sessions[0].studentName) : st.name;
+      try {
+        const rec = { ...(records[rk] || {}), name: st.name, cls: st.cls, number: num, aliasName: alias, updatedAt: Date.now() };
+        await setDoc(doc(db, "student_records", rk), rec);
+        records[rk] = rec;
+        state.openStudent = `${st.cls}#${num}`;
+        rebuildAndRender();
+        flash("✅ تم حفظ رقم الطالب " + st.name + " — تقدر الحين تنشر تقريره", true);
+      } catch (e) { flash("تعذّر حفظ الرقم: " + (e.message || e), false); }
+      return;
+    }
     if (act === "savePart") {
       const v = document.getElementById("partInput").value;
       if (v === "" || isNaN(Number(v)) || Number(v) < 0 || Number(v) > grading.partMax) { flash("أدخل درجة بين 0 و " + grading.partMax, false); return; }
