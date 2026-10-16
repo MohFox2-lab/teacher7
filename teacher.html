@@ -358,9 +358,14 @@ function rebuildAndRender() {
   Object.values(records).forEach(r => {
     if (r && r.aliasName && r.number) aliasMap[(canonicalizeClass(r.cls || "") || "غير محدد") + "#" + r.aliasName] = normalizeNumber(r.number);
   });
+  const renumMap = {};
+  Object.values(records).forEach(r => {
+    if (r && r.number && Array.isArray(r.oldNumbers)) r.oldNumbers.forEach(o => { renumMap[(canonicalizeClass(r.cls || "") || "غير محدد") + "#" + normalizeNumber(o)] = normalizeNumber(r.number); });
+  });
   for (const s of all) {
     const cls = canonicalizeClass(s.decodedClass || s.studentClass || "") || "غير محدد";
-    const number = normalizeNumber(s.decodedStudentNumber || s.rosterNumber || "") || aliasMap[`${cls}#${s.decodedName || s.studentName}`] || "";
+    let number = normalizeNumber(s.decodedStudentNumber || s.rosterNumber || "") || aliasMap[`${cls}#${s.decodedName || s.studentName}`] || "";
+    if (number && renumMap[`${cls}#${number}`]) number = renumMap[`${cls}#${number}`];
     const key = number ? `${cls}#${number}` : `${cls}#${s.decodedName || s.studentName}`;
     if (!studentsIndex[key]) {
       studentsIndex[key] = {
@@ -674,7 +679,13 @@ function renderStudentDetail(key) {
       <div id="filesMsg" class="msg-inline" style="display:none"></div>
       <h2 class="section">${escapeHtml(st.name)} — الفصل ${escapeHtml(st.cls)} — رقم ${escapeHtml(st.number || "—")}</h2>
 
-      ${st.number ? "" : `<div class="box no-print" style="border:2px solid #f59e0b">
+      ${st.number ? `<div class="no-print" style="margin:-4px 0 10px">
+        <button class="pillbtn small" data-act="showEditNum">✏️ تعديل الرقم</button>
+        <span id="editNumBox" style="display:none">
+          <input type="number" id="editNumInput" min="1" value="${escapeAttr(st.number)}" style="width:100px;padding:6px;border:1.5px solid var(--line);border-radius:10px">
+          <button class="pillbtn primary small" data-act="changeNumber">💾 حفظ الرقم الجديد</button>
+        </span>
+      </div>` : `<div class="box no-print" style="border:2px solid #f59e0b">
         <h3>⚠️ هذا الطالب بدون رقم — لا يمكن إنشاء رمز ولي الأمر له</h3>
         <div class="hintline">اكتب رقم الطالب هنا واحفظ، فيظهر في «إشعار الأولياء» وتقدر تنشر تقريره.</div>
         <input type="number" id="numInput" min="1" style="width:110px;padding:8px;border:1.5px solid var(--line);border-radius:10px">
@@ -772,6 +783,34 @@ async function viewClick(e) {
         rebuildAndRender();
         flash("✅ تم حفظ رقم الطالب " + st.name + " — تقدر الحين تنشر تقريره", true);
       } catch (e) { flash("تعذّر حفظ الرقم: " + (e.message || e), false); }
+      return;
+    }
+    if (act === "showEditNum") { const bx = document.getElementById("editNumBox"); bx.style.display = bx.style.display === "none" ? "inline" : "none"; return; }
+    if (act === "changeNumber") {
+      const num = normalizeNumber(document.getElementById("editNumInput").value || "");
+      const oldNum = normalizeNumber(st.number);
+      if (!num) { flash("اكتب الرقم الجديد أولًا", false); return; }
+      if (num === oldNum) { flash("هذا هو نفس الرقم الحالي", false); return; }
+      const other = studentsIndex[`${st.cls}#${num}`];
+      if (other && !confirm(`⚠️ الرقم ${num} مستخدم للطالب «${other.name}» في نفس الفصل.\nلو تابعت، يندمج الطالبان في ملف واحد. متأكد؟`)) return;
+      const oldRk = recKey(st.cls, oldNum), newRk = recKey(st.cls, num);
+      const oldRec = records[oldRk] || {};
+      const hadPin = !!oldRec.parentPin;
+      const olds = new Set((oldRec.oldNumbers || []).map(normalizeNumber));
+      olds.add(oldNum); olds.delete(num);
+      const alias = oldRec.aliasName || (st.sessions[0] ? (st.sessions[0].decodedName || st.sessions[0].studentName) : st.name);
+      const newRec = { ...(records[newRk] || {}), ...oldRec, name: st.name, cls: st.cls, number: num, aliasName: alias, oldNumbers: [...olds], updatedAt: Date.now() };
+      try {
+        await setDoc(doc(db, "student_records", newRk), newRec);
+        records[newRk] = newRec;
+        if (oldRec.parentPin) { try { await deleteDoc(doc(db, "parent_reports", oldRk + "_" + oldRec.parentPin)); } catch (e2) { console.warn(e2); } }
+        if (oldRk !== newRk) { await deleteDoc(doc(db, "student_records", oldRk)); delete records[oldRk]; }
+        state.openStudent = `${st.cls}#${num}`;
+        rebuildAndRender();
+        const nst = studentsIndex[state.openStudent];
+        if (hadPin && nst) { await publishStudent(nst); render(); }
+        flash(hadPin ? "✅ تم تغيير الرقم إلى " + num + " وأُعيد نشر التقرير. ولي الأمر يدخل الحين بالرقم الجديد ونفس الرمز." : "✅ تم تغيير الرقم إلى " + num, true);
+      } catch (e) { flash("تعذّر تغيير الرقم: " + (e.message || e), false); }
       return;
     }
     if (act === "savePart") {
@@ -956,7 +995,7 @@ function renderParentsView(){
 let curriculumDraft = null;
 const ADMIN_EMAIL = "mohfox2@hotmail.com";
 const DEFAULT_APP_SETTINGS = {
-  settingsVersion: 3, practiceDisabledTopics: [], examDisabledTopics: [], practiceOnlyMode: false,
+  settingsVersion: 3, practiceDisabledTopics: [], examDisabledTopics: [], practiceOnlyMode: false, achievementCodeEnabled: true,
   announcement: "", subjectName: "مدرّب منهج العلوم", gradeLabel: "الصف الثاني المتوسط",
   teacherName: "", termLabel: "", monthlyPlan: {label:"", topics:[], locked:true}, classes: []
 };
@@ -981,7 +1020,9 @@ async function renderCurriculumView(){
   const rows=TOPIC_TITLES.map((t,i)=>`<tr><td>${escapeHtml(t)}</td><td><input type="checkbox" data-curr-pr="${i}" ${(c.practiceDisabledTopics||[]).includes(i)?'':'checked'}></td><td><input type="checkbox" data-curr-ex="${i}" ${(c.examDisabledTopics||[]).includes(i)?'':'checked'}></td><td><input type="checkbox" data-curr-plan="${i}" ${plan.has(i)?'checked':''}></td></tr>`).join('');
   content.innerHTML=`<div class="box"><h2 class="section">📚 خطة المنهج والتحكم المركزي</h2><div class="hintline">التدريب والاختبار والمطلوب الآن قوائم مستقلة.</div>
     <div class="rowbtns"><label>اسم الخطة <input id="cvLabel" value="${escapeAttr(c.monthlyPlan.label||'')}" style="padding:8px;border:1px solid var(--line);border-radius:9px"></label>
-    <label><input id="cvPracticeOnly" type="checkbox" ${c.practiceOnlyMode?'checked':''}> تدريب فقط</label></div>
+    <label><input id="cvPracticeOnly" type="checkbox" ${c.practiceOnlyMode?'checked':''}> تدريب فقط</label>
+    <label style="font-weight:700"><input id="cvCodeOn" type="checkbox" ${c.achievementCodeEnabled!==false?'checked':''}> 🏅 تفعيل رمز الإنجاز للطلاب</label></div>
+    <div class="hintline">إذا ألغيت «تفعيل رمز الإنجاز» يختفي الرمز وزر إرساله من التطبيق، ويصير التطبيق للتدريب فقط.</div>
     <table><thead><tr><th>الموضوع</th><th>🧠 تدريب</th><th>📝 اختبار</th><th>📅 مطلوب الآن</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="box" style="margin-top:14px"><h3>📢 الإعلان</h3><textarea id="cvAnn" rows="2" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:9px">${escapeHtml(c.announcement||'')}</textarea></div>
     <button class="pillbtn primary" id="saveCurr">💾 حفظ خطة المنهج والإعدادات</button><div id="currMsg" class="msg-inline"></div></div>`;
@@ -993,6 +1034,7 @@ async function saveCurriculum(){
   c.monthlyPlan.label=document.getElementById('cvLabel').value.trim();
   c.monthlyPlan.locked=false; // للتوافق مع الإعدادات القديمة فقط
   c.practiceOnlyMode=document.getElementById('cvPracticeOnly').checked;
+  c.achievementCodeEnabled=document.getElementById('cvCodeOn').checked;
   c.announcement=document.getElementById('cvAnn').value.trim();
   c.practiceDisabledTopics=[]; c.examDisabledTopics=[]; c.monthlyPlan.topics=[];
   TOPIC_TITLES.forEach((_,i)=>{ if(!document.querySelector(`[data-curr-pr="${i}"]`).checked)c.practiceDisabledTopics.push(i); if(!document.querySelector(`[data-curr-ex="${i}"]`).checked)c.examDisabledTopics.push(i); if(document.querySelector(`[data-curr-plan="${i}"]`).checked)c.monthlyPlan.topics.push(i); });
