@@ -995,7 +995,7 @@ function renderParentsView(){
 let curriculumDraft = null;
 const ADMIN_EMAIL = "mohfox2@hotmail.com";
 const DEFAULT_APP_SETTINGS = {
-  settingsVersion: 3, practiceDisabledTopics: [], examDisabledTopics: [], practiceOnlyMode: false, achievementCodeEnabled: true,
+  settingsVersion: 3, practiceDisabledTopics: [], examDisabledTopics: [], practiceOnlyMode: false, achievementCodeEnabled: true, parentPortalEnabled: true,
   announcement: "", subjectName: "مدرّب منهج العلوم", gradeLabel: "الصف الثاني المتوسط",
   teacherName: "", termLabel: "", monthlyPlan: {label:"", topics:[], locked:true}, classes: []
 };
@@ -1021,7 +1021,8 @@ async function renderCurriculumView(){
   content.innerHTML=`<div class="box"><h2 class="section">📚 خطة المنهج والتحكم المركزي</h2><div class="hintline">التدريب والاختبار والمطلوب الآن قوائم مستقلة.</div>
     <div class="rowbtns"><label>اسم الخطة <input id="cvLabel" value="${escapeAttr(c.monthlyPlan.label||'')}" style="padding:8px;border:1px solid var(--line);border-radius:9px"></label>
     <label><input id="cvPracticeOnly" type="checkbox" ${c.practiceOnlyMode?'checked':''}> تدريب فقط</label>
-    <label style="font-weight:700"><input id="cvCodeOn" type="checkbox" ${c.achievementCodeEnabled!==false?'checked':''}> 🏅 تفعيل رمز الإنجاز للطلاب</label></div>
+    <label style="font-weight:700"><input id="cvCodeOn" type="checkbox" ${c.achievementCodeEnabled!==false?'checked':''}> 🏅 تفعيل رمز الإنجاز للطلاب</label>
+    <label style="font-weight:700"><input id="cvParentOn" type="checkbox" ${c.parentPortalEnabled!==false?'checked':''}> 👨‍👩‍👦 إظهار زر إشعار أولياء الأمور</label></div>
     <div class="hintline">إذا ألغيت «تفعيل رمز الإنجاز» يختفي الرمز وزر إرساله من التطبيق، ويصير التطبيق للتدريب فقط.</div>
     <table><thead><tr><th>الموضوع</th><th>🧠 تدريب</th><th>📝 اختبار</th><th>📅 مطلوب الآن</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="box" style="margin-top:14px"><h3>📢 الإعلان</h3><textarea id="cvAnn" rows="2" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:9px">${escapeHtml(c.announcement||'')}</textarea></div>
@@ -1035,6 +1036,7 @@ async function saveCurriculum(){
   c.monthlyPlan.locked=false; // للتوافق مع الإعدادات القديمة فقط
   c.practiceOnlyMode=document.getElementById('cvPracticeOnly').checked;
   c.achievementCodeEnabled=document.getElementById('cvCodeOn').checked;
+  c.parentPortalEnabled=document.getElementById('cvParentOn').checked;
   c.announcement=document.getElementById('cvAnn').value.trim();
   c.practiceDisabledTopics=[]; c.examDisabledTopics=[]; c.monthlyPlan.topics=[];
   TOPIC_TITLES.forEach((_,i)=>{ if(!document.querySelector(`[data-curr-pr="${i}"]`).checked)c.practiceDisabledTopics.push(i); if(!document.querySelector(`[data-curr-ex="${i}"]`).checked)c.examDisabledTopics.push(i); if(document.querySelector(`[data-curr-plan="${i}"]`).checked)c.monthlyPlan.topics.push(i); });
