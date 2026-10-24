@@ -1,0 +1,406 @@
+{
+  "source": "ملف انجاز المعلم.zip (React source recovered by correcting archive offset)",
+  "categories": [
+    {
+      "id": "basic",
+      "title": "البيانات الأساسية",
+      "items": [
+        {
+          "id": "dashboard",
+          "title": "لوحة التحكم",
+          "path": "/"
+        },
+        {
+          "id": "profile",
+          "title": "السيرة الذاتية",
+          "path": "/profile"
+        },
+        {
+          "id": "qualifications",
+          "title": "المؤهلات العلمية",
+          "path": "/qualifications"
+        },
+        {
+          "id": "experiences",
+          "title": "الخبرات المهنية",
+          "path": "/experiences"
+        }
+      ]
+    },
+    {
+      "id": "development",
+      "title": "التطوير المهني",
+      "items": [
+        {
+          "id": "courses",
+          "title": "الدورات التدريبية",
+          "path": "/courses"
+        },
+        {
+          "id": "ethics-charter",
+          "title": "ميثاق أخلاقيات مهنة التعليم",
+          "path": "/report/16"
+        },
+        {
+          "id": "certifications",
+          "title": "وثائق الاعتماد المهني",
+          "path": "/certifications"
+        },
+        {
+          "id": "workshops",
+          "title": "ورش العمل",
+          "path": "/workshops"
+        },
+        {
+          "id": "conferences",
+          "title": "المؤتمرات والندوات",
+          "path": "/conferences"
+        },
+        {
+          "id": "readings",
+          "title": "القراءات التربوية",
+          "path": "/readings"
+        }
+      ]
+    },
+    {
+      "id": "teaching",
+      "title": "الأداء التعليمي",
+      "items": [
+        {
+          "id": "lesson-plans",
+          "title": "التخطيط للدروس",
+          "path": "/lesson-plans"
+        },
+        {
+          "id": "strategies",
+          "title": "استراتيجيات التدريس",
+          "path": "/strategies"
+        },
+        {
+          "id": "assessments",
+          "title": "التقويم والاختبارات",
+          "path": "/assessments"
+        },
+        {
+          "id": "results",
+          "title": "نتائج الطلاب",
+          "path": "/results"
+        },
+        {
+          "id": "activities",
+          "title": "الأنشطة الصفية",
+          "path": "/activities"
+        }
+      ]
+    },
+    {
+      "id": "achievements",
+      "title": "الإنجازات",
+      "items": [
+        {
+          "id": "awards",
+          "title": "الجوائز والتكريمات",
+          "path": "/awards"
+        },
+        {
+          "id": "projects",
+          "title": "المشاريع التربوية",
+          "path": "/projects"
+        },
+        {
+          "id": "competitions",
+          "title": "المسابقات",
+          "path": "/competitions"
+        },
+        {
+          "id": "innovations",
+          "title": "الابتكارات التعليمية",
+          "path": "/innovations"
+        }
+      ]
+    },
+    {
+      "id": "community",
+      "title": "المشاركة المجتمعية",
+      "items": [
+        {
+          "id": "school-activities",
+          "title": "الأنشطة المدرسية",
+          "path": "/school-activities"
+        },
+        {
+          "id": "community-service",
+          "title": "خدمة المجتمع",
+          "path": "/community-service"
+        },
+        {
+          "id": "parent-communication",
+          "title": "التواصل مع أولياء الأمور",
+          "path": "/parent-communication"
+        },
+        {
+          "id": "collaboration",
+          "title": "التعاون مع الزملاء",
+          "path": "/collaboration"
+        }
+      ]
+    },
+    {
+      "id": "reports",
+      "title": "التقارير",
+      "items": [
+        {
+          "id": "summary",
+          "title": "ملخص الإنجازات",
+          "path": "/summary"
+        },
+        {
+          "id": "statistics",
+          "title": "الإحصائيات",
+          "path": "/statistics"
+        },
+        {
+          "id": "print",
+          "title": "طباعة الملف",
+          "path": "/print"
+        },
+        {
+          "id": "export",
+          "title": "تصدير البيانات",
+          "path": "/export"
+        },
+        {
+          "id": "settings",
+          "title": "الإعدادات",
+          "path": "/settings"
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "path": "/",
+      "component": "HomePage"
+    },
+    {
+      "path": "/report/:id",
+      "component": "ReportPage"
+    },
+    {
+      "path": "/evidence-arm",
+      "component": "EvidenceArmPage"
+    },
+    {
+      "path": "/qualifications",
+      "component": "QualificationsPage"
+    },
+    {
+      "path": "/courses",
+      "component": "CoursesPage"
+    },
+    {
+      "path": "/certifications",
+      "component": "CertificationsPage"
+    },
+    {
+      "path": "/workshops",
+      "component": "WorkshopsPage"
+    },
+    {
+      "path": "/classroom-activities",
+      "component": "ClassroomActivitiesPage"
+    },
+    {
+      "path": "/learning-loss",
+      "component": "LearningLossPage"
+    },
+    {
+      "path": "/program-execution",
+      "component": "ProgramExecutionPage"
+    },
+    {
+      "path": "/colleague-collaboration",
+      "component": "ColleagueCollaborationPage"
+    },
+    {
+      "path": "/self-assessment",
+      "component": "SelfAssessmentPage"
+    },
+    {
+      "path": "/management-assessment",
+      "component": "ManagementAssessmentPage"
+    },
+    {
+      "path": "/portfolio-summary",
+      "component": "PortfolioSummaryPage"
+    },
+    {
+      "path": "/mutual-visits",
+      "component": "MutualVisitsPage"
+    },
+    {
+      "path": "/smart-upload",
+      "component": "SmartUploadPage"
+    },
+    {
+      "path": "/manage-evidence",
+      "component": "ManageEvidencePage"
+    },
+    {
+      "path": "/evidence-guide",
+      "component": "EvidenceGuidePage"
+    },
+    {
+      "path": "/arabic-remedial",
+      "component": "ArabicRemedialPage"
+    },
+    {
+      "path": "/biology-remedial",
+      "component": "BiologyRemedialPage"
+    },
+    {
+      "path": "/english-remedial",
+      "component": "EnglishRemedialPage"
+    },
+    {
+      "path": "/digital-design-remedial",
+      "component": "DigitalDesignRemedialPage"
+    },
+    {
+      "path": "/critical-thinking-remedial",
+      "component": "CriticalThinkingRemedialPage"
+    },
+    {
+      "path": "/sustainable-development-remedial",
+      "component": "SustainableDevelopmentRemedialPage"
+    },
+    {
+      "path": "/islamic-studies-remedial",
+      "component": "IslamicStudiesRemedialPage"
+    },
+    {
+      "path": "/math-remedial",
+      "component": "MathRemedialPage"
+    },
+    {
+      "path": "/admin-skills-remedial",
+      "component": "AdminSkillsRemedialPage"
+    },
+    {
+      "path": "/functional-writing-remedial",
+      "component": "FunctionalWritingRemedialPage"
+    },
+    {
+      "path": "/language-competencies-remedial",
+      "component": "LanguageCompetenciesRemedialPage"
+    },
+    {
+      "path": "/tafsir-remedial",
+      "component": "TafsirRemedialPage"
+    },
+    {
+      "path": "/islamic-studies-toheed-fiqh-remedial",
+      "component": "IslamicStudiesToheedFiqhRemedialPage"
+    },
+    {
+      "path": "/hadith-remedial",
+      "component": "HadithRemedialPage"
+    },
+    {
+      "path": "/earth-space-remedial",
+      "component": "EarthSpaceRemedialPage"
+    },
+    {
+      "path": "/science-remedial",
+      "component": "ScienceRemedialPage"
+    },
+    {
+      "path": "/physics-remedial",
+      "component": "PhysicsRemedialPage"
+    },
+    {
+      "path": "/chemistry-remedial",
+      "component": "ChemistryRemedialPage"
+    },
+    {
+      "path": "/life-skills-remedial",
+      "component": "LifeSkillsRemedialPage"
+    },
+    {
+      "path": "/social-studies-remedial",
+      "component": "SocialStudiesRemedialPage"
+    },
+    {
+      "path": "/chinese-remedial",
+      "component": "ChineseRemedialPage"
+    },
+    {
+      "path": "/physical-education-remedial",
+      "component": "PhysicalEducationRemedialPage"
+    },
+    {
+      "path": "/digital-skills-remedial",
+      "component": "DigitalSkillsRemedialPage"
+    },
+    {
+      "path": "/art-education-remedial",
+      "component": "ArtEducationRemedialPage"
+    },
+    {
+      "path": "/tajweed-remedial",
+      "component": "TajweedRemedialPage"
+    },
+    {
+      "path": "/improvement-plan",
+      "component": "ImprovementPlanPage"
+    }
+  ],
+  "page_files": [
+    "admin-skills-remedial.tsx",
+    "arabic-remedial.tsx",
+    "art-education-remedial.tsx",
+    "biology-remedial.tsx",
+    "certifications.tsx",
+    "chemistry-remedial.tsx",
+    "chinese-remedial.tsx",
+    "classroom-activities.tsx",
+    "colleague-collaboration.tsx",
+    "courses.tsx",
+    "critical-thinking-remedial.tsx",
+    "digital-design-remedial.tsx",
+    "digital-skills-remedial.tsx",
+    "earth-space-remedial.tsx",
+    "english-remedial.tsx",
+    "evidence-arm.tsx",
+    "evidence-guide.tsx",
+    "functional-writing-remedial.tsx",
+    "hadith-remedial.tsx",
+    "home.tsx",
+    "improvement-plan.tsx",
+    "islamic-studies-remedial.tsx",
+    "islamic-studies-toheed-fiqh-remedial.tsx",
+    "language-competencies-remedial.tsx",
+    "learning-loss.tsx",
+    "life-skills-remedial.tsx",
+    "manage-evidence.tsx",
+    "management-assessment.tsx",
+    "math-remedial.tsx",
+    "mutual-visits.tsx",
+    "not-found.tsx",
+    "physical-education-remedial.tsx",
+    "physics-remedial.tsx",
+    "portfolio-summary.tsx",
+    "program-execution.tsx",
+    "qualifications.tsx",
+    "report.tsx",
+    "science-remedial.tsx",
+    "self-assessment.tsx",
+    "smart-upload.tsx",
+    "social-studies-remedial.tsx",
+    "sustainable-development-remedial.tsx",
+    "tafsir-remedial.tsx",
+    "tajweed-remedial.tsx",
+    "workshops.tsx"
+  ]
+}
