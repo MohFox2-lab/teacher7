@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // التطبيق الحالي يرسل رابط Google Drive وملاحظة؛ لا يوجد مسار رفع فعلي إلى Firebase Storage.
+    // المنع الافتراضي يمنع رفع ملفات عامة إذا فُعّلت الخدمة مستقبلًا دون إعداد مقصود.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -351,6 +351,38 @@ document.getElementById("resetFocusBtn").addEventListener("click", () => {
 });
 
 // ---------------- بناء الفهرس ----------------
+// تطبيع الاسم للمطابقة (تشكيل، همزات، ياء/ألف مقصورة، تاء مربوطة، مسافات)
+function nameKey(n) {
+  return String(n || "").replace(/[\u0640\u064B-\u0652]/g, "").replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/\s+/g, " ").trim();
+}
+function nameMatches(st, nk) {
+  if (nameKey(st.name) === nk) return true;
+  return (st.aliases || []).some(a => nameKey(a) === nk);
+}
+// طالب أرسل رمزه بلا رقم: نربطه بنفس الطالب المرقّم (نفس الفصل + نفس الاسم) إن وُجد
+function mergeNumberless() {
+  const list = Object.values(studentsIndex);
+  const numbered = list.filter(s => s.number);
+  list.filter(s => !s.number).forEach(s => {
+    const nk = nameKey(s.name);
+    let cands = numbered.filter(n => n.cls === s.cls && nameMatches(n, nk));
+    if (!cands.length) {   // تطابق مرن: أول كلمة + آخر كلمة، بشرط أن يكون المرشح وحيدًا
+      const tk = nk.split(" ");
+      const loose = numbered.filter(n => {
+        if (n.cls !== s.cls) return false;
+        const u = nameKey(n.name).split(" ");
+        return u.length >= 2 && tk.length >= 2 && u[0] === tk[0] && u[u.length - 1] === tk[tk.length - 1];
+      });
+      if (loose.length === 1) cands = loose;
+    }
+    if (cands.length === 1) {
+      cands[0].sessions.push(...s.sessions);
+      delete studentsIndex[s.key];
+    }
+  });
+}
+
 function rebuildAndRender() {
   const all = dbSubs.concat(manualSubs);
   studentsIndex = {};
@@ -385,7 +417,9 @@ function rebuildAndRender() {
     if (!studentsIndex[key]) {
       studentsIndex[key] = { key, cls, number: normalizeNumber(r.number), name: r.name || "بدون اسم", rosterNumber: normalizeNumber(r.number), sessions: [] };
     }
+    if (r.aliases && r.aliases.length) studentsIndex[key].aliases = r.aliases.slice();
   });
+  mergeNumberless();
   Object.values(studentsIndex).forEach(st => {
     st.sessions.sort((a, b) => (b.decodedTimestamp || "").localeCompare(a.decodedTimestamp || ""));
   });
@@ -678,6 +712,10 @@ function renderStudentDetail(key) {
       </div>
       <div id="filesMsg" class="msg-inline" style="display:none"></div>
       <h2 class="section">${escapeHtml(st.name)} — الفصل ${escapeHtml(st.cls)} — رقم ${escapeHtml(st.number || "—")}</h2>
+      ${st.number ? "" : `<div class="box no-print" style="border-color:#f0b429;background:#fff9e6">
+        <b>⚠️ هذا الطالب أرسل رمزه بدون رقم في الكشف</b>، لذلك لا يمكن إنشاء رمز لولي أمره ولا حفظ مشاركته وسلوكه.
+        <div style="margin-top:8px"><button class="pillbtn primary" data-act="assignNumber" data-key="${escapeAttr(st.key)}">🔢 تعيين رقم الطالب</button></div>
+      </div>`}
 
       ${st.number ? `<div class="no-print" style="margin:-4px 0 10px">
         <button class="pillbtn small" data-act="showEditNum">✏️ تعديل الرقم</button>
@@ -742,6 +780,26 @@ function renderStudentDetail(key) {
 }
 
 // ---------------- معالج أزرار ملفات الطلاب والدرجات ----------------
+async function assignNumber(st) {
+  const numRaw = prompt("اكتب رقم الطالب «" + st.name + "» في الكشف:");
+  if (!numRaw) return;
+  const number = normalizeNumber(numRaw);
+  if (!/^\d+$/.test(number)) { alert("اكتب رقمًا صحيحًا (أرقام فقط)."); return; }
+  const rk = recKey(st.cls, number);
+  const existing = records[rk];
+  if (existing && nameKey(existing.name) !== nameKey(st.name) &&
+      !confirm("الرقم " + number + " مسجّل للطالب «" + existing.name + "». هل هذا هو نفس الطالب؟ (سيُدمج رمزه معه)")) return;
+  const aliases = Array.from(new Set([...(existing && existing.aliases || []), st.name]));
+  const rec = Object.assign({}, existing || {}, {
+    name: (existing && existing.name) || st.name, cls: st.cls, number, aliases, updatedAt: Date.now()
+  });
+  await setDoc(doc(db, "student_records", rk), rec);
+  records[rk] = rec;
+  state.openStudent = "";
+  rebuildAndRender();
+  flash("✅ تم تعيين الرقم " + number + " للطالب. يمكنك الآن نشر تقريره وتوليد رمز ولي الأمر.", true);
+}
+
 async function viewClick(e) {
   const b = e.target.closest ? e.target.closest("[data-act]") : null;
   if (!b) return;
@@ -750,6 +808,7 @@ async function viewClick(e) {
   try {
     if (act === "open") { state.openStudent = b.dataset.key; state.editBh = ""; render(); return; }
     if (act === "back") { state.openStudent = ""; state.editBh = ""; render(); return; }
+    if (act === "assignNumber") { const s3 = studentsIndex[b.dataset.key] || st; if (s3) await assignNumber(s3); return; }
     if (act === "publishAll") { await publishAll(); if (state.showCodes) renderCodesTable(); return; }
     if (act === "showCodes") { state.showCodes = true; render(); return; }
     if (act === "hideCodes") { state.showCodes = false; render(); return; }
@@ -983,9 +1042,13 @@ function renderParentsView(){
     const pin=rec.parentPin||'—';
     return `<tr><td>${escapeHtml(st.number||'—')}</td><td>${escapeHtml(st.name)}</td><td>${escapeHtml(st.cls)}</td><td><b style="letter-spacing:2px">${escapeHtml(pin)}</b></td><td>${rec.parentPin?'<span class="pill good">منشور</span>':'<span class="pill mid">غير منشور</span>'}</td><td class="no-print"><button class="pillbtn primary small" data-act="parentPublish" data-key="${escapeAttr(st.key)}">${rec.parentPin?'🔄 تحديث':'📤 نشر'}</button> <button class="pillbtn small" data-act="parentCopy" data-key="${escapeAttr(st.key)}">📋 رسالة</button></td></tr>`;
   }).join('');
-  content.innerHTML=`<div class="box"><h2 class="section">👨‍👩‍👦 إشعار الأولياء</h2><div class="hintline">لكل طالب رمز خاص. لا يُعرض التقرير إلا عند إدخال الفصل + رقم الطالب + الرمز.</div><table><thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>رمز ولي الأمر</th><th>الحالة</th><th class="no-print">إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">لا يوجد طلاب بأرقام.</td></tr>'}</tbody></table></div>`;
+  const noNum = getFilteredStudents().filter(st => !st.number);
+  const noNumBox = noNum.length ? `<div class="box" style="border-color:#f0b429;background:#fff9e6"><b>⚠️ ${noNum.length} طالب أرسلوا رموزهم بدون رقم في الكشف — لن يظهر لهم رمز ولي أمر حتى تعيّن أرقامهم:</b>
+    <div style="margin-top:8px">${noNum.map(st => `<div style="margin:4px 0">${escapeHtml(st.name)} (الفصل ${escapeHtml(st.cls)}) <button class="pillbtn small primary" data-act="assignNumber" data-key="${escapeAttr(st.key)}">🔢 تعيين رقم</button></div>`).join('')}</div></div>` : '';
+  content.innerHTML=`${noNumBox}<div class="box"><h2 class="section">👨‍👩‍👦 إشعار الأولياء</h2><div class="hintline">لكل طالب رمز خاص. لا يُعرض التقرير إلا عند إدخال الفصل + رقم الطالب + الرمز.</div><table><thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>رمز ولي الأمر</th><th>الحالة</th><th class="no-print">إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">لا يوجد طلاب بأرقام.</td></tr>'}</tbody></table></div>`;
   content.onclick=async e=>{
     const b=e.target.closest('[data-act]'); if(!b)return; const st=studentsIndex[b.dataset.key]; if(!st)return; const act=b.dataset.act;
+    if(act==='assignNumber'){ await assignNumber(st); return; }
     if(act==='parentPublish'){ if(await publishStudent(st)){ render(); flash('✅ تم نشر/تحديث تقرير '+st.name,true); } }
     if(act==='parentCopy'){ const rec=records[studentRecKey(st)]; if(!rec?.parentPin) { await publishStudent(st); } const msg=parentMessage(st,records[studentRecKey(st)]); if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(msg); else prompt('انسخ الرسالة:',msg); flash('تم نسخ رسالة ولي الأمر ✅',true); }
   };
@@ -995,7 +1058,7 @@ function renderParentsView(){
 let curriculumDraft = null;
 const ADMIN_EMAIL = "mohfox2@hotmail.com";
 const DEFAULT_APP_SETTINGS = {
-  settingsVersion: 3, practiceDisabledTopics: [], examDisabledTopics: [], practiceOnlyMode: false, achievementCodeEnabled: true, parentPortalEnabled: true,
+  settingsVersion: 3, practiceDisabledTopics: [], examDisabledTopics: [], practiceOnlyMode: false, achievementCodeEnabled: true, parentPortalEnabled: true, portfolioEnabled: true,
   announcement: "", subjectName: "مدرّب منهج العلوم", gradeLabel: "الصف الثاني المتوسط",
   teacherName: "", termLabel: "", monthlyPlan: {label:"", topics:[], locked:true}, classes: []
 };
@@ -1022,8 +1085,9 @@ async function renderCurriculumView(){
     <div class="rowbtns"><label>اسم الخطة <input id="cvLabel" value="${escapeAttr(c.monthlyPlan.label||'')}" style="padding:8px;border:1px solid var(--line);border-radius:9px"></label>
     <label><input id="cvPracticeOnly" type="checkbox" ${c.practiceOnlyMode?'checked':''}> تدريب فقط</label>
     <label style="font-weight:700"><input id="cvCodeOn" type="checkbox" ${c.achievementCodeEnabled!==false?'checked':''}> 🏅 تفعيل رمز الإنجاز للطلاب</label>
-    <label style="font-weight:700"><input id="cvParentOn" type="checkbox" ${c.parentPortalEnabled!==false?'checked':''}> 👨‍👩‍👦 إظهار زر إشعار أولياء الأمور</label></div>
-    <div class="hintline">إذا ألغيت «تفعيل رمز الإنجاز» يختفي الرمز وزر إرساله من التطبيق، ويصير التطبيق للتدريب فقط.</div>
+    <label style="font-weight:700"><input id="cvParentOn" type="checkbox" ${c.parentPortalEnabled!==false?'checked':''}> 👨‍👩‍👦 إظهار زر إشعار أولياء الأمور</label>
+    <label style="font-weight:700"><input id="cvPortfolioOn" type="checkbox" ${c.portfolioEnabled!==false?'checked':''}> 📁 تفعيل تبويب ملف إنجاز المعلم داخل التطبيق الرئيسي</label></div>
+    <div class="hintline">إذا ألغيت «تفعيل رمز الإنجاز» يختفي الرمز وزر إرساله من التطبيق، ويصير التطبيق للتدريب فقط. ويمكنك تشغيل/إيقاف تبويب ملف إنجاز المعلم من الخيار أعلاه؛ هذا الخيار يتحكم بظهور التبويب وإتاحته في التطبيق الرئيسي.</div>
     <table><thead><tr><th>الموضوع</th><th>🧠 تدريب</th><th>📝 اختبار</th><th>📅 مطلوب الآن</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="box" style="margin-top:14px"><h3>📢 الإعلان</h3><textarea id="cvAnn" rows="2" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:9px">${escapeHtml(c.announcement||'')}</textarea></div>
     <button class="pillbtn primary" id="saveCurr">💾 حفظ خطة المنهج والإعدادات</button><div id="currMsg" class="msg-inline"></div></div>`;
@@ -1037,6 +1101,7 @@ async function saveCurriculum(){
   c.practiceOnlyMode=document.getElementById('cvPracticeOnly').checked;
   c.achievementCodeEnabled=document.getElementById('cvCodeOn').checked;
   c.parentPortalEnabled=document.getElementById('cvParentOn').checked;
+  c.portfolioEnabled=document.getElementById('cvPortfolioOn').checked;
   c.announcement=document.getElementById('cvAnn').value.trim();
   c.practiceDisabledTopics=[]; c.examDisabledTopics=[]; c.monthlyPlan.topics=[];
   TOPIC_TITLES.forEach((_,i)=>{ if(!document.querySelector(`[data-curr-pr="${i}"]`).checked)c.practiceDisabledTopics.push(i); if(!document.querySelector(`[data-curr-ex="${i}"]`).checked)c.examDisabledTopics.push(i); if(document.querySelector(`[data-curr-plan="${i}"]`).checked)c.monthlyPlan.topics.push(i); });

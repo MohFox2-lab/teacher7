@@ -1,17 +1,90 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /submissions/{docId} {
-      // أي زائر يقدر يرسل رمز إنجاز جديد (الطالب) لكنه لا يقدر يقرأ أو يعدّل أو يحذف
-      allow create: if
-        request.resource.data.keys().hasAll(['studentName','studentClass','rosterNumber','rawCode','createdAt']) &&
-        request.resource.data.studentName is string &&
-        request.resource.data.studentClass is string &&
-        request.resource.data.rosterNumber is string &&
-        request.resource.data.rawCode is string;
+    function isTeacher() {
+      return request.auth != null
+        && request.auth.token.email == 'mohfox2@hotmail.com';
+    }
 
-      // القراءة والتعديل والحذف للمعلم المسجّل دخوله فقط
-      allow read, update, delete: if request.auth != null;
+    // رموز الإنجاز: الإرسال متاح دون حساب، والإدارة للمعلم فقط.
+    match /submissions/{docId} {
+      allow create: if
+        request.resource.data.keys().hasAll([
+          'studentName', 'studentClass', 'rosterNumber', 'rawCode', 'createdAt'
+        ])
+        && request.resource.data.studentName is string
+        && request.resource.data.studentName.size() <= 120
+        && request.resource.data.studentClass is string
+        && request.resource.data.studentClass.size() <= 40
+        && request.resource.data.rosterNumber is string
+        && request.resource.data.rosterNumber.size() <= 30
+        && request.resource.data.rawCode is string
+        && request.resource.data.rawCode.size() <= 3000
+        && request.resource.data.createdAt is timestamp;
+      allow read, update, delete: if isTeacher();
+    }
+
+    // تسليمات المهام: الطالب يرسل رابطًا/ملاحظة، والمعلم فقط يقرأ ويدير.
+    match /task_submissions/{docId} {
+      allow create: if
+        request.resource.data.keys().hasAll([
+          'studentName', 'studentClass', 'rosterNumber',
+          'taskTitle', 'link', 'note', 'createdAt'
+        ])
+        && request.resource.data.studentName is string
+        && request.resource.data.studentName.size() > 0
+        && request.resource.data.studentName.size() <= 120
+        && request.resource.data.studentClass is string
+        && request.resource.data.studentClass.size() > 0
+        && request.resource.data.studentClass.size() <= 40
+        && request.resource.data.rosterNumber is string
+        && request.resource.data.rosterNumber.size() > 0
+        && request.resource.data.rosterNumber.size() <= 30
+        && request.resource.data.taskTitle is string
+        && request.resource.data.taskTitle.size() <= 200
+        && request.resource.data.link is string
+        && request.resource.data.link.size() <= 2048
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 3000
+        && (request.resource.data.link.size() > 0 || request.resource.data.note.size() > 0)
+        && request.resource.data.createdAt is timestamp;
+      allow read, update, delete: if isTeacher();
+    }
+
+    // سجلات الطلاب ودرجاتهم: المعلم فقط.
+    match /student_records/{docId} {
+      allow read, write: if isTeacher();
+    }
+
+    // التطبيق والبوابة تحتاجان قراءة وثيقتي settings وgrading فقط.
+    match /app_config/{docId} {
+      allow get: if docId == 'settings' || docId == 'grading';
+      allow list: if false;
+      allow create, update, delete: if isTeacher();
+    }
+
+    // تقرير ولي الأمر لا يُقرأ إلا إذا طابق الرمز المخزن آخر جزء من معرّف الوثيقة.
+    match /parent_reports/{docId} {
+      allow get: if
+        resource.data.parentPin is string
+        && resource.data.parentPin.size() >= 6
+        && docId.split('_')[docId.split('_').size() - 1] == resource.data.parentPin;
+      allow list: if false;
+      allow create, update, delete: if isTeacher();
+    }
+
+    // ملف إنجاز المعلم: المعلم فقط (الشواهد، الملفات المرفقة، بيانات التقرير).
+    match /portfolio_items/{docId} {
+      allow read, write: if isTeacher();
+    }
+    match /portfolio_files/{docId} {
+      allow read, write: if isTeacher();
+    }
+    match /portfolio_plans/{docId} {
+      allow read, write: if isTeacher();
+    }
+    match /portfolio_meta/{docId} {
+      allow read, write: if isTeacher();
     }
   }
 }

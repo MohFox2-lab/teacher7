@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>إرسال رمز الإنجاز</title>
+<title>إرسال رمز الإنجاز — v9.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -31,7 +31,7 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 10px 30px rgba(15,60,58,.06)}
   label{display:block;font-weight:700;font-size:14px;margin:0 0 6px;color:var(--text)}
   .field{margin-bottom:16px}
-  input,textarea{
+  input,select,textarea{
     width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
     font-family:inherit;font-size:15px;background:#fbfdfd;color:var(--text);transition:border-color .15s
   }
@@ -70,7 +70,7 @@
     <div class="row2">
       <div class="field">
         <label>الفصل</label>
-        <input type="text" id="studentClass" placeholder="مثال: 1 أو 1/أ">
+        <select id="studentClass" disabled><option value="">جاري تحميل الفصول…</option></select>
       </div>
       <div class="field">
         <label>رقمك في الكشف</label>
@@ -94,7 +94,7 @@
 </div>
 
 <!--
-  v2:
+  v9.1:
   نستخدم Firebase Compat بدل ES Modules هنا.
   الهدف: زيادة التوافق مع Safari/iPhone وبعض المتصفحات المضمنة داخل التطبيقات.
 -->
@@ -119,6 +119,14 @@
   const previewEl = $("preview");
   const msgEl = $("msg");
   const submitBtn = $("submitBtn");
+  const classEl = $("studentClass");
+  const DEFAULT_CLASSES = Array.from({length:10}, (_,i) => String(i+1));
+  function escHtml(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function setClassOptions(classes){
+    classes = Array.isArray(classes) && classes.length ? classes.map(String) : DEFAULT_CLASSES;
+    classEl.innerHTML = '<option value="">اختر فصلك</option>' + classes.map(v => '<option value="' + escHtml(v) + '">' + escHtml(v) + '</option>').join('');
+    classEl.disabled = false;
+  }
 
   function showMsg(text, type) {
     msgEl.textContent = text;
@@ -130,10 +138,11 @@
     if (!raw) return null;
 
     const trimmed = String(raw).trim().replace(/\s+/g, "");
-    // بعض الأجهزة تولّد رمزًا بدون لاحقة التحقق (.xxxxxx) — نقبله ولا نرفضه
     const dotIdx = trimmed.lastIndexOf(".");
-    const payload = dotIdx === -1 ? trimmed : trimmed.slice(0, dotIdx);
-    const checksum = dotIdx === -1 ? "" : trimmed.slice(dotIdx + 1);
+    if (dotIdx === -1) return null;
+
+    const payload = trimmed.slice(0, dotIdx);
+    const checksum = trimmed.slice(dotIdx + 1);
     let decodedText;
 
     try {
@@ -209,6 +218,8 @@
       ? Math.round((decoded.correct / decoded.total) * 100)
       : 0;
 
+    if (decoded.cls && Array.from(classEl.options).some(o => o.value === decoded.cls)) classEl.value = decoded.cls;
+
     previewEl.innerHTML =
       "<b>معاينة الرمز:</b> " + (decoded.name || "—") +
       " · النتيجة " + decoded.correct + "/" + decoded.total + " (" + acc + "%)" +
@@ -227,18 +238,6 @@
     }
   });
 
-  // حارس زمني: لو التحميل تعلّق بدون نجاح ولا فشل صريح خلال 8 ثوانٍ
-  // (شبكة بطيئة جدًا أو حجب صامت)، نوضح للطالب بدل ما يضل ينتظر بلا تفسير
-  setTimeout(function () {
-    if (!submitBtn.dataset.ready) {
-      submitBtn.disabled = true;
-      showMsg(
-        "تعذر تجهيز خدمة الإرسال خلال وقت معقول. جرّب: متصفح ثاني (Safari أو Chrome)، أو شبكة إنترنت ثانية (بيانات الجوال بدل واي فاي المدرسة مثلًا).",
-        "err"
-      );
-    }
-  }, 8000);
-
   try {
     if (!window.firebase || !firebase.firestore) {
       throw new Error("Firebase SDK not loaded");
@@ -247,10 +246,19 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    submitBtn.disabled = false;
-    submitBtn.dataset.ready = "1";
-    submitBtn.textContent = "إرسال";
-    showMsg("جاهز للإرسال.", "info");
+    db.collection("app_config").doc("settings").get().then(function(doc){
+      setClassOptions(doc.exists ? (doc.data().classes || []) : DEFAULT_CLASSES);
+      submitBtn.disabled = false;
+      submitBtn.dataset.ready = "1";
+      submitBtn.textContent = "إرسال";
+      showMsg("جاهز للإرسال.", "info");
+    }).catch(function(){
+      setClassOptions(DEFAULT_CLASSES);
+      submitBtn.disabled = false;
+      submitBtn.dataset.ready = "1";
+      submitBtn.textContent = "إرسال";
+      showMsg("تم تجهيز الصفحة بالقائمة الافتراضية للفصول.", "info");
+    });
 
     submitBtn.addEventListener("click", async function () {
       const studentName = $("studentName").value.trim();
@@ -266,6 +274,11 @@
       const decoded = decodeCode(rawCode);
       if (!decoded) {
         showMsg("الرمز غير صالح أو مقصوص. تأكد إنك نسخته كامل من التطبيق وحاول مرة ثانية.", "err");
+        return;
+      }
+
+      if (decoded.cls && decoded.cls !== studentClass) {
+        showMsg("الفصل المختار لا يطابق الفصل الموجود داخل رمز الإنجاز. اختر الفصل الصحيح.", "err");
         return;
       }
 
