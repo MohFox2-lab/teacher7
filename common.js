@@ -13,7 +13,7 @@ export const firebaseConfig = {
 // ============================================================
 // فك رمز الإنجاز (يدعم الصيغة القديمة والصيغة v3 الجديدة)
 // الصيغة القديمة:  اسم|فصل|توقيت|صحيح|إجمالي|دقائق|          (base64).checksum
-// الصيغة v3:       v3|اسم|فصل|رقم_الطالب|توقيت|صحيح|إجمالي|دقائق|[أبواب متقنة]  (base64).checksum
+// الصيغة v3:       v3|اسم|فصل|رقم_الطالب/ة|توقيت|صحيح|إجمالي|دقائق|[أبواب متقنة]  (base64).checksum
 // ============================================================
 export function decodeCode(raw) {
   if (!raw) return null;
@@ -123,9 +123,9 @@ function normalizeClassToken(tok) {
   return t.replace(/^[أإآا]$/u, "أ");
 }
 
-// هذا التطبيق خاص بصف واحد ثابت (الثاني متوسط) — فكل الطلاب "صفهم" نفس الرقم،
+// هذا التطبيق خاص بصف واحد ثابت (الثاني متوسط) — فكل الطلاب/ات "صفهم" نفس الرقم،
 // والرقم/الحرف المختلف هو رقم الشعبة الحقيقي. هذا يحل مشكلة الترتيب المعكوس:
-// إذا كتب الطالب "2/6" أو "6/2" نعرف مسبقًا أن "2" هو الصف الثابت، فنعيد ترتيبها
+// إذا كتب الطالب/ة "2/6" أو "6/2" نعرف مسبقًا أن "2" هو الصف الثابت، فنعيد ترتيبها
 // دائمًا بنفس الشكل القياسي "2/6" بغض النظر عن ترتيب الكتابة.
 const FIXED_GRADE = "2";
 
@@ -155,7 +155,7 @@ export function canonicalizeClass(raw) {
 // الاسم المعروض لشعبة (هـ بدل ه)
 export function classLabel(v) { return v === "ه" ? "هـ" : v; }
 
-// هوية فريدة للطالب: رقم الطالب إن وجد، وإلا الاسم + الفصل
+// هوية فريدة للطالب: رقم الطالب/ة إن وجد، وإلا الاسم + الفصل
 export function studentKey(decoded, fallbackClass) {
   const cls = canonicalizeClass(decoded.cls || fallbackClass || "");
   if (decoded.studentNumber) return `${cls}#${decoded.studentNumber}`;
@@ -164,11 +164,11 @@ export function studentKey(decoded, fallbackClass) {
 
 
 // ============================================================
-// ===== نظام الدرجات وملف الطالب وتقرير ولي الأمر =====
+// ===== نظام الدرجات وملف الطالب/ة وتقرير ولي/ة الأمر =====
 // ============================================================
 export const TOPIC_TITLES = ["أسلوب العلم", "حل المشكلات بطريقة علمية", "المحاليل والذائبية (المادة النقية والمخاليط)", "المركبات الجزيئية (الروابط التساهمية والأيونية)", "الذائبية", "المحاليل (التشبع والتركيز)", "المحاليل الحمضية", "المحاليل القاعدية", "الرقم الهيدروجيني PH", "المادة وحالاتها", "الحرارة وتحولات المادة", "التغيرات بين الحالات الصلبة والسائلة والغازية", "سلوك الموائع (الضغط)", "التغير في ضغط الغاز", "الطفو والانغمار", "مبدأ باسكال", "الطاقة", "تحولات الطاقة", "توليد الطاقة الكهربائية", "الدم والدورة الدموية", "الجهاز الدوري والجهاز اللمفي", "المناعة والمرض", "الجهاز الهضمي والتغذية", "المواد الغذائية", "جهاز التنفس", "جهاز الإخراج", "المرض عبر التاريخ"];
 
-// رقم الطالب: يوحّد الأرقام العربية (١٨ -> 18) ويحذف المسافات والأصفار البادئة
+// رقم الطالب/ة: يوحّد الأرقام العربية (١٨ -> 18) ويحذف المسافات والأصفار البادئة
 export function normalizeNumber(raw) {
   if (raw === null || raw === undefined) return "";
   const s = arabicIndicToWestern(String(raw)).replace(/\s+/g, "");
@@ -176,14 +176,14 @@ export function normalizeNumber(raw) {
   return s;
 }
 
-// مفتاح سجل الطالب: الفصل الموحّد + رقمه (مثال: 2-6_18)
+// مفتاح سجل الطالب/ة: الفصل الموحّد + رقمه (مثال: 2-6_18)
 export function recKey(cls, number) {
   // نبقي بادئة الصف الثابت كما كانت (2-6_18) حتى لا تضيع السجلات ورموز الأولياء المنشورة
   const sec = canonicalizeClass(cls || "").replace(/[أإآ]/g, "ا").replace(/\//g, "-");
   return FIXED_GRADE + "-" + sec + "_" + normalizeNumber(number);
 }
 
-// رمز ولي الأمر: 6 خانات بحروف وأرقام غير ملتبسة
+// رمز ولي/ة الأمر: 6 خانات بحروف وأرقام غير ملتبسة
 export function generatePin() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const arr = new Uint32Array(6);
@@ -224,8 +224,8 @@ export function topicTestPoints(grading, i) {
   return n ? r1(grading.testMax / n) : 0;
 }
 
-// يحسب تقرير الطالب كاملاً
-// mastered/attempted: مصفوفات أرقام مواضيع  |  record: سجل المعلم  |  taskDelivered: هل سلّم المهمة
+// يحسب تقرير الطالب/ة كاملاً
+// mastered/attempted: مصفوفات أرقام مواضيع  |  record: سجل المعلم/ة  |  taskDelivered: هل سلّم المهمة
 export function computeReport({ grading, mastered, attempted, solved, record, taskDelivered }) {
   const g = normalizeGrading(grading);
   const M = new Set((mastered || []).map(Number));
@@ -242,7 +242,7 @@ export function computeReport({ grading, mastered, attempted, solved, record, ta
     if (M.has(i)) status = "mastered";          // أجاب كل الأسئلة وأتقنها
     else if (S.has(i)) status = "solved";       // أجاب كل الأسئلة ولم يتقنها كلها
     else if (A.has(i)) status = "started";      // بدأ ولم يكمل
-    // الاختبار: من الإتقان دائمًا. الواجب: من الحل أو من الإتقان حسب إعداد المعلم
+    // الاختبار: من الإتقان دائمًا. الواجب: من الحل أو من الإتقان حسب إعداد المعلم/ة
     const hwDone = g.hwMode === "mastered" ? status === "mastered" : (status === "mastered" || status === "solved");
     if (status === "mastered") { testScore += pts; masteredCount++; }
     if (hwDone) hwScore += hwShare;

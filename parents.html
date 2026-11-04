@@ -51,20 +51,20 @@
 <div class="wrap">
   <div class="logo">👨‍👩‍👦</div>
   <h1>إشعار أولياء الأمور</h1>
-  <p class="sub">اختر فصل ابنك من القائمة، ثم أدخل رقمه في الكشف ورمز الدخول الذي أرسله لك المعلم، لتشاهد مستواه ودرجاته.</p>
+  <p class="sub">اختر فصل ابنك من القائمة، ثم أدخل رقمه في الكشف ورمز الدخول الذي أرسله لك المعلم/ة، لتشاهد مستواه ودرجاته.</p>
 
   <div class="card" id="loginCard">
     <div class="row2">
       <div class="field"><label>الفصل</label><select id="cls" disabled><option value="">جاري تحميل الفصول…</option></select></div>
-      <div class="field"><label>رقم الطالب في الكشف</label><input type="text" inputmode="numeric" id="num" placeholder="مثال: 18"></div>
+      <div class="field"><label>رقم الطالب/ة في الكشف</label><input type="text" inputmode="numeric" id="num" placeholder="مثال: 18"></div>
     </div>
-    <div class="field"><label>رمز ولي الأمر</label><input type="text" id="pin" placeholder="6 خانات" autocapitalize="characters" autocomplete="off" style="direction:ltr;text-align:left;letter-spacing:2px"></div>
+    <div class="field"><label>رمز ولي/ة الأمر</label><input type="text" id="pin" placeholder="6 خانات" autocapitalize="characters" autocomplete="off" style="direction:ltr;text-align:left;letter-spacing:2px"></div>
     <button type="button" id="goBtn" disabled>جاري التجهيز…</button>
     <div id="msg" class="msg info">جاري تجهيز الاتصال…</div>
   </div>
 
   <div id="report" class="hide"></div>
-  <footer>هذه الصفحة تعرض بيانات الطالب لولي أمره فقط عبر رمز الدخول</footer>
+  <footer>هذه الصفحة تعرض بيانات الطالب/ة لولي أمره فقط عبر رمز الدخول</footer>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -88,7 +88,7 @@ var DEFAULT_CLASSES = Array.from({length:10}, function(_,i){ return String(i+1);
 function setClassOptions(classes){
   classes = Array.isArray(classes) && classes.length ? classes.map(String) : DEFAULT_CLASSES;
   var el = $("cls");
-  el.innerHTML = '<option value="">اختر فصل الطالب</option>' + classes.map(function(v){ return '<option value="' + esc(v) + '">الفصل ' + esc(v) + '</option>'; }).join('');
+  el.innerHTML = '<option value="">اختر فصل الطالب/ة</option>' + classes.map(function(v){ return '<option value="' + esc(v) + '">الفصل ' + esc(v) + '</option>'; }).join('');
   el.disabled = false;
 }
 function loadClassOptions(){
@@ -98,7 +98,7 @@ function loadClassOptions(){
 }
 
 
-// ===== توحيد الفصل والرقم (نفس منطق لوحة المعلم) =====
+// ===== توحيد الفصل والرقم (نفس منطق لوحة المعلم/ة) =====
 const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 const AR_NUMBER_WORDS = {
   "صفر": "0",
@@ -134,9 +134,9 @@ function normalizeClassToken(tok) {
   return t.replace(/^[أإآا]$/u, "أ");
 }
 
-// هذا التطبيق خاص بصف واحد ثابت (الثاني متوسط) — فكل الطلاب "صفهم" نفس الرقم،
+// هذا التطبيق خاص بصف واحد ثابت (الثاني متوسط) — فكل الطلاب/ات "صفهم" نفس الرقم،
 // والرقم/الحرف المختلف هو رقم الشعبة الحقيقي. هذا يحل مشكلة الترتيب المعكوس:
-// إذا كتب الطالب "2/6" أو "6/2" نعرف مسبقًا أن "2" هو الصف الثابت، فنعيد ترتيبها
+// إذا كتب الطالب/ة "2/6" أو "6/2" نعرف مسبقًا أن "2" هو الصف الثابت، فنعيد ترتيبها
 // دائمًا بنفس الشكل القياسي "2/6" بغض النظر عن ترتيب الكتابة.
 const FIXED_GRADE = "2";
 
@@ -199,7 +199,7 @@ function render(r){
   var h = '<div class="card"><div class="name">' + esc(r.name) + '</div>' +
     '<div class="meta">الفصل ' + esc(r.cls) + ' · رقم ' + esc(r.number) + (d ? ' · آخر تحديث: ' + esc(d) : '') + '</div></div>';
 
-  h += '<div class="card total"><div class="meta">⭐ الدرجة الحالية — حسب توزيع المعلم</div><div><span class="big">' + s.total + '</span> <span class="of">/ ' + s.max + '</span></div></div>';
+  h += '<div class="card total"><div class="meta">⭐ الدرجة الحالية — حسب توزيع المعلم/ة</div><div><span class="big">' + s.total + '</span> <span class="of">/ ' + s.max + '</span></div></div>';
 
   h += '<div class="card"><div class="grid">' +
     '<div class="tile"><div class="t">📝 الاختبارات</div><div class="v">' + s.testScore + ' / ' + s.testMax + '</div><div class="s">من إتقان الأبواب</div></div>' +
@@ -228,7 +228,7 @@ function render(r){
 }
 
 function ready(){
-  goBtn.disabled = false; goBtn.textContent = "عرض بيانات الطالب"; msgEl.className = "msg";
+  goBtn.disabled = false; goBtn.textContent = "عرض بيانات الطالب/ة"; msgEl.className = "msg";
   try {
     var saved = JSON.parse(localStorage.getItem("manhaj_parent_v1") || "null");
     if (saved) { $("cls").value = saved.c || ""; $("num").value = saved.n || ""; $("pin").value = saved.p || ""; }
@@ -252,19 +252,19 @@ try {
 
 goBtn.addEventListener("click", function(){
   var cls = $("cls").value.trim(), num = $("num").value.trim(), pin = $("pin").value.trim().toUpperCase().replace(/\s+/g, "");
-  if (!cls || !num || !pin) { showMsg("أكمل الفصل ورقم الطالب والرمز.", "err"); return; }
+  if (!cls || !num || !pin) { showMsg("أكمل الفصل ورقم الطالب/ة والرمز.", "err"); return; }
   var key = recKey(cls, num) + "_" + pin;
   goBtn.disabled = true; goBtn.textContent = "جارٍ البحث…"; showMsg("جارٍ جلب البيانات…", "info");
   $("report").className = "hide";
   db.collection("parent_reports").doc(key).get().then(function(doc){
-    if (!doc.exists) { showMsg("البيانات غير صحيحة، أو لم ينشر المعلم تقرير هذا الطالب بعد. تأكد من الفصل والرقم والرمز.", "err"); return; }
+    if (!doc.exists) { showMsg("البيانات غير صحيحة، أو لم ينشر المعلم/ة تقرير هذا الطالب/ة بعد. تأكد من الفصل والرقم والرمز.", "err"); return; }
     try { localStorage.setItem("manhaj_parent_v1", JSON.stringify({c: cls, n: num, p: pin})); } catch(e){}
     msgEl.className = "msg";
     render(doc.data());
   }).catch(function(err){
     console.error(err);
     showMsg("تعذّر الاتصال. تأكد من الإنترنت وحاول مرة أخرى.", "err");
-  }).then(function(){ goBtn.disabled = false; goBtn.textContent = "عرض بيانات الطالب"; });
+  }).then(function(){ goBtn.disabled = false; goBtn.textContent = "عرض بيانات الطالب/ة"; });
 });
 })();
 </script>

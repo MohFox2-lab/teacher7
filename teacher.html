@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>لوحة المعلم</title>
+<title>لوحة المعلم/ة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -130,7 +130,7 @@
 <div id="loginScreen">
   <div class="loginCard">
     <div class="logo">🔒</div>
-    <h1>دخول المعلم</h1>
+    <h1>دخول المعلم/ة</h1>
     <form id="loginForm">
       <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required autocomplete="username">
       <input type="password" id="loginPass" placeholder="كلمة السر" required autocomplete="current-password">
@@ -143,14 +143,14 @@
 <!-- لوحة التحكم -->
 <div id="dashboard" class="hidden">
   <header class="no-print">
-    <h1>👨‍🏫 لوحة المعلم</h1>
+    <h1>👨‍🏫 لوحة المعلم/ة</h1>
     <button id="logoutBtn">🔒 خروج</button>
   </header>
   <main>
     <!-- صندوق التحقق اليدوي -->
     <div class="box no-print">
       <h3>✔️ تحقق يدوي من رموز</h3>
-      <div class="hintline">الصق رموز الطلاب (رمز في كل سطر أو مفصولة بمسافات) ثم اضغط «تحقق». هذي الرموز تُعرض فورًا هنا ولا تُحفظ في القاعدة — مفيدة لو استلمت رمز عبر واتساب مثلًا.</div>
+      <div class="hintline">الصق رموز الطلاب/ات (رمز في كل سطر أو مفصولة بمسافات) ثم اضغط «تحقق». هذي الرموز تُعرض فورًا هنا ولا تُحفظ في القاعدة — مفيدة لو استلمت رمز عبر واتساب مثلًا.</div>
       <textarea id="manualCodes" placeholder="الصق رمز أو أكثر هنا…"></textarea>
       <div class="rowbtns">
         <button class="pillbtn primary" id="verifyBtn">✔️ تحقق</button>
@@ -161,12 +161,12 @@
 
     <!-- أزرار العرض -->
     <div class="rowbtns no-print" style="margin-bottom:14px">
-      <button class="pillbtn active" data-view="all">عرض جميع الطلاب والجلسات</button>
+      <button class="pillbtn active" data-view="all">عرض جميع الطلاب/ات والجلسات</button>
       <button class="pillbtn" data-view="chapters">عرض الأبواب حسب الإتقان</button>
       <button class="pillbtn" data-view="masteredOnly">عرض الأبواب المتقنة فقط</button>
       <button class="pillbtn" data-view="classProgress">📊 تقدم الفصل</button>
       <button class="pillbtn" data-view="reports">📤 التقارير</button>
-      <button class="pillbtn" data-view="files">🎓 ملفات الطلاب والدرجات</button>
+      <button class="pillbtn" data-view="files">🎓 ملفات الطلاب/ات والدرجات</button>
       <button class="pillbtn" data-view="grading">⚙️ توزيع الدرجات</button>
       <button class="pillbtn" data-view="curriculum">📚 خطة المنهج</button>
       <button class="pillbtn" data-view="parents">👨‍👩‍👦 إشعار الأولياء</button>
@@ -175,9 +175,9 @@
     <!-- فلاتر -->
     <div class="toolbar no-print">
       <select id="classFilter"><option value="">كل الفصول</option></select>
-      <input type="text" id="searchBox" placeholder="🔍 ابحث باسم الطالب…">
-      <button class="pillbtn" id="resetFocusBtn" style="display:none">↩ عرض كل الطلاب</button>
-      <button class="pillbtn danger" id="deleteAllBtn" style="margin-right:auto">🗑️ حذف كل الطلاب</button>
+      <input type="text" id="searchBox" placeholder="🔍 ابحث باسم الطالب/ة…">
+      <button class="pillbtn" id="resetFocusBtn" style="display:none">↩ عرض كل الطلاب/ات</button>
+      <button class="pillbtn danger" id="deleteAllBtn" style="margin-right:auto">🗑️ حذف كل الطلاب/ات</button>
     </div>
 
     <!-- أزرار التصدير -->
@@ -241,9 +241,9 @@ let dbSubs = [];       // من Firestore
 let manualSubs = [];   // من اللصق اليدوي (لا تُحفظ)
 let studentsIndex = {};
 let state = { view: "all", cls: "", search: "", focusKey: "", openStudent: "", editBh: "", showCodes: false };
-let records = {};              // سجلات المعلم لكل طالب (المفتاح: الفصل_الرقم)
+let records = {};              // سجلات المعلم/ة لكل طالب (المفتاح: الفصل_الرقم)
 let grading = normalizeGrading();
-let taskSubs = [];             // تسليمات المهام من الطلاب
+let taskSubs = [];             // تسليمات المهام من الطلاب/ات
 let gradingDraft = null;
 
 async function loadData() {
@@ -259,7 +259,7 @@ async function loadData() {
   }
 }
 
-// سجلات الطلاب + توزيع الدرجات + تسليمات المهام (فشلها لا يمنع عرض رموز الإنجاز)
+// سجلات الطلاب/ات + توزيع الدرجات + تسليمات المهام (فشلها لا يمنع عرض رموز الإنجاز)
 async function loadExtraData() {
   try {
     const rs = await getDocs(collection(db, "student_records"));
@@ -360,7 +360,7 @@ function nameMatches(st, nk) {
   if (nameKey(st.name) === nk) return true;
   return (st.aliases || []).some(a => nameKey(a) === nk);
 }
-// طالب أرسل رمزه بلا رقم: نربطه بنفس الطالب المرقّم (نفس الفصل + نفس الاسم) إن وُجد
+// طالب أرسل رمزه بلا رقم: نربطه بنفس الطالب/ة المرقّم (نفس الفصل + نفس الاسم) إن وُجد
 function mergeNumberless() {
   const list = Object.values(studentsIndex);
   const numbered = list.filter(s => s.number);
@@ -409,7 +409,7 @@ function rebuildAndRender() {
     }
     studentsIndex[key].sessions.push(s);
   }
-  // طلاب أضافهم المعلم يدويًا أو لهم سجل ولم يرسلوا رمزًا بعد
+  // طلاب أضافهم المعلم/ة يدويًا أو لهم سجل ولم يرسلوا رمزًا بعد
   Object.values(records).forEach(r => {
     if (!r || !r.number) return;
     const cls = canonicalizeClass(r.cls || "") || "غير محدد";
@@ -462,7 +462,7 @@ function render() {
 
   content.onclick = null; content.onchange = null;
   if (!dbSubs.length && !manualSubs.length && !Object.keys(records).length) {
-    content.innerHTML = `<div class="empty">ما وصلت أي رموز إنجاز بعد — انتظر إرسال الطلاب، أو جرّب التحقق اليدوي فوق.</div>`;
+    content.innerHTML = `<div class="empty">ما وصلت أي رموز إنجاز بعد — انتظر إرسال الطلاب/ات، أو جرّب التحقق اليدوي فوق.</div>`;
     return;
   }
 
@@ -477,7 +477,7 @@ function render() {
 }
 
 // ============================================================
-// 🎓 ملفات الطلاب والدرجات + ⚙️ توزيع الدرجات + تقارير أولياء الأمور
+// 🎓 ملفات الطلاب/ات والدرجات + ⚙️ توزيع الدرجات + تقارير أولياء الأمور
 // ============================================================
 const BH_TYPES = [
   { v: "شغب", label: "😈 مشاغب" },
@@ -528,7 +528,7 @@ function flash(msg, ok) {
 
 async function saveRecord(st, patch) {
   const rk = studentRecKey(st);
-  if (!rk) { alert("هذا الطالب بدون رقم في الكشف — لا يمكن حفظ سجل له."); return false; }
+  if (!rk) { alert("هذا الطالب/ة بدون رقم في الكشف — لا يمكن حفظ سجل له."); return false; }
   const base = records[rk] || {};
   const rec = Object.assign({}, base, patch, {
     name: base.name || st.name, cls: st.cls, number: st.number, updatedAt: Date.now()
@@ -554,7 +554,7 @@ function reportPayload(st, rec) {
 
 async function publishStudent(st) {
   const rk = studentRecKey(st);
-  if (!rk) { alert("هذا الطالب بدون رقم في الكشف."); return false; }
+  if (!rk) { alert("هذا الطالب/ة بدون رقم في الكشف."); return false; }
   if (!(records[rk] && records[rk].parentPin)) await saveRecord(st, { parentPin: generatePin() });
   const rec = records[rk];
   await setDoc(doc(db, "parent_reports", rk + "_" + rec.parentPin), reportPayload(st, rec));
@@ -591,10 +591,10 @@ function parentLink() {
 }
 
 function parentMessage(st, rec) {
-  return `السلام عليكم ولي أمر الطالب ${st.name}\nلمتابعة درجات ومستوى ابنكم في مادة العلوم افتحوا الرابط:\n${parentLink()}\nالفصل: ${st.cls}\nرقم الطالب: ${st.number}\nرمز الدخول: ${rec.parentPin}`;
+  return `السلام عليكم ولي أمر الطالب/ة ${st.name}\nلمتابعة درجات ومستوى ابنكم في مادة العلوم افتحوا الرابط:\n${parentLink()}\nالفصل: ${st.cls}\nرقم الطالب/ة: ${st.number}\nرمز الدخول: ${rec.parentPin}`;
 }
 
-// ---------------- قائمة الطلاب مع الدرجات ----------------
+// ---------------- قائمة الطلاب/ات مع الدرجات ----------------
 // ---------------- 📋 جدول رموز أولياء الأمور (للنسخ والإرسال أو الطباعة) ----------------
 function renderCodesTable() {
   const students = getFilteredStudents().sort((a, b) =>
@@ -620,7 +620,7 @@ function renderCodesTable() {
       <h2 class="section">📋 رموز أولياء الأمور (${withPin.length} طالب)</h2>
       <div class="hintline no-print">انسخ رسالة كل طالب وأرسلها لولي أمره، أو استخدم أزرار CSV / طباعة / PDF فوق. ${missing ? `⚠️ ${missing} طالب ليس عنده رمز بعد — اضغط «نشر/تحديث التقارير» أولاً.` : ""}</div>
       ${withPin.length ? `<table id="summaryTable">
-        <thead><tr><th>الفصل</th><th>الرقم</th><th>الطالب</th><th>رمز الدخول</th><th>نص الرسالة</th><th class="no-print"></th></tr></thead>
+        <thead><tr><th>الفصل</th><th>الرقم</th><th>الطالب/ة</th><th>رمز الدخول</th><th>نص الرسالة</th><th class="no-print"></th></tr></thead>
         <tbody>${rows}</tbody></table>` : `<div class="empty">لا توجد رموز بعد — اضغط «نشر/تحديث التقارير».</div>`}
     </div>`;
   content.onclick = viewClick;
@@ -658,11 +658,11 @@ function renderFilesView() {
         <button class="pillbtn" data-act="addStudent">➕ إضافة طالب يدويًا</button>
       </div>
       <div id="filesMsg" class="msg-inline" style="display:none"></div>
-      <h2 class="section">🎓 درجات الطلاب (من ${grading.testMax + grading.hwMax + grading.partMax + grading.taskMax})</h2>
-      <div class="hintline no-print">اضغط على أي طالب لفتح ملفه (المشاركة، المهام، السلوك، رمز ولي الأمر).</div>
+      <h2 class="section">🎓 درجات الطلاب/ات (من ${grading.testMax + grading.hwMax + grading.partMax + grading.taskMax})</h2>
+      <div class="hintline no-print">اضغط على أي طالب لفتح ملفه (المشاركة، المهام، السلوك، رمز ولي/ة الأمر).</div>
       ${students.length ? `
       <table id="summaryTable">
-        <thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>الإتقان</th><th>الاختبار</th><th>الواجبات</th><th>المشاركة</th><th>الأداء المهامي</th><th>المجموع</th><th>رمز ولي الأمر</th></tr></thead>
+        <thead><tr><th>الرقم</th><th>الطالب/ة</th><th>الفصل</th><th>الإتقان</th><th>الاختبار</th><th>الواجبات</th><th>المشاركة</th><th>الأداء المهامي</th><th>المجموع</th><th>رمز ولي/ة الأمر</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>` : `<div class="empty">ما فيه طلاب مطابقين للفلاتر الحالية.</div>`}
     </div>`;
@@ -700,21 +700,21 @@ function renderStudentDetail(key) {
 
   const pin = rec.parentPin
     ? `<b style="font-size:16px;letter-spacing:2px">${escapeHtml(rec.parentPin)}</b>
-       <button class="pillbtn small" data-act="copyMsg">📋 نسخ رسالة لولي الأمر</button>
+       <button class="pillbtn small" data-act="copyMsg">📋 نسخ رسالة لولي/ة الأمر</button>
        <button class="pillbtn small" data-act="regenPin">🔄 تجديد الرمز</button>`
-    : `<span class="none">لم يُنشأ بعد — اضغط «نشر تقرير الطالب»</span>`;
+    : `<span class="none">لم يُنشأ بعد — اضغط «نشر تقرير الطالب/ة»</span>`;
 
   content.innerHTML = `
     <div id="exportArea">
       <div class="rowbtns no-print" style="margin-bottom:10px">
-        <button class="pillbtn" data-act="back">↩ كل الطلاب</button>
-        <button class="pillbtn primary" data-act="publishOne">📤 نشر تقرير الطالب لولي الأمر</button>
+        <button class="pillbtn" data-act="back">↩ كل الطلاب/ات</button>
+        <button class="pillbtn primary" data-act="publishOne">📤 نشر تقرير الطالب/ة لولي/ة الأمر</button>
       </div>
       <div id="filesMsg" class="msg-inline" style="display:none"></div>
       <h2 class="section">${escapeHtml(st.name)} — الفصل ${escapeHtml(st.cls)} — رقم ${escapeHtml(st.number || "—")}</h2>
       ${st.number ? "" : `<div class="box no-print" style="border-color:#f0b429;background:#fff9e6">
-        <b>⚠️ هذا الطالب أرسل رمزه بدون رقم في الكشف</b>، لذلك لا يمكن إنشاء رمز لولي أمره ولا حفظ مشاركته وسلوكه.
-        <div style="margin-top:8px"><button class="pillbtn primary" data-act="assignNumber" data-key="${escapeAttr(st.key)}">🔢 تعيين رقم الطالب</button></div>
+        <b>⚠️ هذا الطالب/ة أرسل رمزه بدون رقم في الكشف</b>، لذلك لا يمكن إنشاء رمز لولي أمره ولا حفظ مشاركته وسلوكه.
+        <div style="margin-top:8px"><button class="pillbtn primary" data-act="assignNumber" data-key="${escapeAttr(st.key)}">🔢 تعيين رقم الطالب/ة</button></div>
       </div>`}
 
       ${st.number ? `<div class="no-print" style="margin:-4px 0 10px">
@@ -724,8 +724,8 @@ function renderStudentDetail(key) {
           <button class="pillbtn primary small" data-act="changeNumber">💾 حفظ الرقم الجديد</button>
         </span>
       </div>` : `<div class="box no-print" style="border:2px solid #f59e0b">
-        <h3>⚠️ هذا الطالب بدون رقم — لا يمكن إنشاء رمز ولي الأمر له</h3>
-        <div class="hintline">اكتب رقم الطالب هنا واحفظ، فيظهر في «إشعار الأولياء» وتقدر تنشر تقريره.</div>
+        <h3>⚠️ هذا الطالب/ة بدون رقم — لا يمكن إنشاء رمز ولي/ة الأمر له</h3>
+        <div class="hintline">اكتب رقم الطالب/ة هنا واحفظ، فيظهر في «إشعار الأولياء» وتقدر تنشر تقريره.</div>
         <input type="number" id="numInput" min="1" style="width:110px;padding:8px;border:1.5px solid var(--line);border-radius:10px">
         <button class="pillbtn primary" data-act="setNumber">💾 حفظ الرقم</button>
       </div>`}
@@ -737,7 +737,7 @@ function renderStudentDetail(key) {
           <tr><th>المشاركة</th><td>${fmtScore(sc.part, sc.partMax)}</td>
               <th>الأداء المهامي</th><td>${fmtScore(sc.task, sc.taskMax)} — ${escapeHtml(sc.taskStatus)}</td></tr>
         </table>
-        <div class="hintline" style="margin-top:8px">🔑 رمز ولي الأمر: ${pin}</div>
+        <div class="hintline" style="margin-top:8px">🔑 رمز ولي/ة الأمر: ${pin}</div>
       </div>
 
       <div class="box no-print">
@@ -750,7 +750,7 @@ function renderStudentDetail(key) {
       <div class="box no-print">
         <h3>📎 الأداء المهامي (من ${sc.taskMax})${grading.currentTask.title ? " — المهمة: " + escapeHtml(grading.currentTask.title) : ""}</h3>
         <div class="hintline">الحالة: ${escapeHtml(sc.taskStatus)}${grading.currentTask.autoFullOnSubmit ? " (التسليم يمنح الدرجة كاملة تلقائيًا ما لم تسجّل درجة يدويًا)" : ""}</div>
-        ${subs.length ? `<table style="margin-bottom:10px"><thead><tr><th>المهمة</th><th>الرابط/الملف</th><th>ملاحظة الطالب</th><th>التاريخ</th><th></th></tr></thead><tbody>${subRows}</tbody></table>` : `<div class="hintline">لم يسلّم الطالب المهمة عبر التطبيق.</div>`}
+        ${subs.length ? `<table style="margin-bottom:10px"><thead><tr><th>المهمة</th><th>الرابط/الملف</th><th>ملاحظة الطالب/ة</th><th>التاريخ</th><th></th></tr></thead><tbody>${subRows}</tbody></table>` : `<div class="hintline">لم يسلّم الطالب/ة المهمة عبر التطبيق.</div>`}
         <input type="number" id="taskInput" min="0" max="${sc.taskMax}" step="0.5" value="${rec.taskScore ?? ""}" style="width:90px;padding:8px;border:1.5px solid var(--line);border-radius:10px">
         <button class="pillbtn primary" data-act="saveTask">تسجيل الدرجة يدويًا</button>
         <button class="pillbtn" data-act="clearTask">إلغاء التقييم اليدوي</button>
@@ -774,21 +774,21 @@ function renderStudentDetail(key) {
         </div>
       </div>
       ${behaviors.length ? `<table><thead><tr><th>التاريخ</th><th>الحصة</th><th>النوع</th><th>الملاحظة</th><th class="no-print"></th></tr></thead><tbody>${bhRows}</tbody></table>`
-        : `<div class="empty">ما فيه سجلات سلوك لهذا الطالب.</div>`}
+        : `<div class="empty">ما فيه سجلات سلوك لهذا الطالب/ة.</div>`}
     </div>`;
   content.onclick = viewClick;
 }
 
-// ---------------- معالج أزرار ملفات الطلاب والدرجات ----------------
+// ---------------- معالج أزرار ملفات الطلاب/ات والدرجات ----------------
 async function assignNumber(st) {
-  const numRaw = prompt("اكتب رقم الطالب «" + st.name + "» في الكشف:");
+  const numRaw = prompt("اكتب رقم الطالب/ة «" + st.name + "» في الكشف:");
   if (!numRaw) return;
   const number = normalizeNumber(numRaw);
   if (!/^\d+$/.test(number)) { alert("اكتب رقمًا صحيحًا (أرقام فقط)."); return; }
   const rk = recKey(st.cls, number);
   const existing = records[rk];
   if (existing && nameKey(existing.name) !== nameKey(st.name) &&
-      !confirm("الرقم " + number + " مسجّل للطالب «" + existing.name + "». هل هذا هو نفس الطالب؟ (سيُدمج رمزه معه)")) return;
+      !confirm("الرقم " + number + " مسجّل للطالب «" + existing.name + "». هل هذا هو نفس الطالب/ة؟ (سيُدمج رمزه معه)")) return;
   const aliases = Array.from(new Set([...(existing && existing.aliases || []), st.name]));
   const rec = Object.assign({}, existing || {}, {
     name: (existing && existing.name) || st.name, cls: st.cls, number, aliases, updatedAt: Date.now()
@@ -797,7 +797,7 @@ async function assignNumber(st) {
   records[rk] = rec;
   state.openStudent = "";
   rebuildAndRender();
-  flash("✅ تم تعيين الرقم " + number + " للطالب. يمكنك الآن نشر تقريره وتوليد رمز ولي الأمر.", true);
+  flash("✅ تم تعيين الرقم " + number + " للطالب. يمكنك الآن نشر تقريره وتوليد رمز ولي/ة الأمر.", true);
 }
 
 async function viewClick(e) {
@@ -831,7 +831,7 @@ async function viewClick(e) {
 
     if (act === "setNumber") {
       const num = normalizeNumber(document.getElementById("numInput").value || "");
-      if (!num) { flash("اكتب رقم الطالب أولًا", false); return; }
+      if (!num) { flash("اكتب رقم الطالب/ة أولًا", false); return; }
       const rk = recKey(st.cls, num);
       const alias = st.sessions[0] ? (st.sessions[0].decodedName || st.sessions[0].studentName) : st.name;
       try {
@@ -840,7 +840,7 @@ async function viewClick(e) {
         records[rk] = rec;
         state.openStudent = `${st.cls}#${num}`;
         rebuildAndRender();
-        flash("✅ تم حفظ رقم الطالب " + st.name + " — تقدر الحين تنشر تقريره", true);
+        flash("✅ تم حفظ رقم الطالب/ة " + st.name + " — تقدر الحين تنشر تقريره", true);
       } catch (e) { flash("تعذّر حفظ الرقم: " + (e.message || e), false); }
       return;
     }
@@ -851,7 +851,7 @@ async function viewClick(e) {
       if (!num) { flash("اكتب الرقم الجديد أولًا", false); return; }
       if (num === oldNum) { flash("هذا هو نفس الرقم الحالي", false); return; }
       const other = studentsIndex[`${st.cls}#${num}`];
-      if (other && !confirm(`⚠️ الرقم ${num} مستخدم للطالب «${other.name}» في نفس الفصل.\nلو تابعت، يندمج الطالبان في ملف واحد. متأكد؟`)) return;
+      if (other && !confirm(`⚠️ الرقم ${num} مستخدم للطالب «${other.name}» في نفس الفصل.\nلو تابعت، يندمج الطالب/ةان في ملف واحد. متأكد؟`)) return;
       const oldRk = recKey(st.cls, oldNum), newRk = recKey(st.cls, num);
       const oldRec = records[oldRk] || {};
       const hadPin = !!oldRec.parentPin;
@@ -868,7 +868,7 @@ async function viewClick(e) {
         rebuildAndRender();
         const nst = studentsIndex[state.openStudent];
         if (hadPin && nst) { await publishStudent(nst); render(); }
-        flash(hadPin ? "✅ تم تغيير الرقم إلى " + num + " وأُعيد نشر التقرير. ولي الأمر يدخل الحين بالرقم الجديد ونفس الرمز." : "✅ تم تغيير الرقم إلى " + num, true);
+        flash(hadPin ? "✅ تم تغيير الرقم إلى " + num + " وأُعيد نشر التقرير. ولي/ة الأمر يدخل الحين بالرقم الجديد ونفس الرمز." : "✅ تم تغيير الرقم إلى " + num, true);
       } catch (e) { flash("تعذّر تغيير الرقم: " + (e.message || e), false); }
       return;
     }
@@ -913,7 +913,7 @@ async function viewClick(e) {
       const list = ((records[rk] || {}).behaviors || []).filter(x => x.id !== b.dataset.id);
       if (await saveRecord(st, { behaviors: list })) { await publishIfPublished(st); render(); }
     } else if (act === "publishOne") {
-      if (await publishStudent(st)) { render(); flash("✅ تم نشر تقرير الطالب. أرسل لولي الأمر رمز الدخول.", true); }
+      if (await publishStudent(st)) { render(); flash("✅ تم نشر تقرير الطالب/ة. أرسل لولي/ة الأمر رمز الدخول.", true); }
     } else if (act === "copyMsg") {
       const rec = records[studentRecKey(st)];
       const msg = parentMessage(st, rec);
@@ -921,7 +921,7 @@ async function viewClick(e) {
       else prompt("انسخ الرسالة:", msg);
       flash("تم نسخ الرسالة ✅", true);
     } else if (act === "regenPin") {
-      if (!confirm("تجديد الرمز يُبطل الرمز القديم عند ولي الأمر. متابعة؟")) return;
+      if (!confirm("تجديد الرمز يُبطل الرمز القديم عند ولي/ة الأمر. متابعة؟")) return;
       const rk = studentRecKey(st), old = (records[rk] || {}).parentPin;
       if (old) await deleteDoc(doc(db, "parent_reports", rk + "_" + old));
       await saveRecord(st, { parentPin: generatePin() });
@@ -933,7 +933,7 @@ async function viewClick(e) {
   }
 }
 
-// لو كان تقرير الطالب منشورًا سابقًا، نحدّثه تلقائيًا بعد أي تعديل
+// لو كان تقرير الطالب/ة منشورًا سابقًا، نحدّثه تلقائيًا بعد أي تعديل
 async function publishIfPublished(st) {
   const rec = records[studentRecKey(st)];
   if (rec && rec.parentPin) await publishStudent(st);
@@ -942,9 +942,9 @@ async function publishIfPublished(st) {
 async function addStudentManually() {
   const clsRaw = prompt("الفصل (رقم أو حرف، مثال: 6 أو أ):");
   if (!clsRaw) return;
-  const numRaw = prompt("رقم الطالب في الكشف:");
+  const numRaw = prompt("رقم الطالب/ة في الكشف:");
   if (!numRaw) return;
-  const name = prompt("اسم الطالب:");
+  const name = prompt("اسم الطالب/ة:");
   if (!name) return;
   const cls = canonicalizeClass(clsRaw) || clsRaw.trim();
   const number = normalizeNumber(numRaw);
@@ -954,12 +954,12 @@ async function addStudentManually() {
   await setDoc(doc(db, "student_records", rk), rec);
   records[rk] = rec;
   rebuildAndRender();
-  flash("✅ تمت إضافة الطالب.", true);
+  flash("✅ تمت إضافة الطالب/ة.", true);
 }
 
-// ---------------- استيراد كشف الطلاب وإدخال الدرجات دفعة واحدة ----------------
+// ---------------- استيراد كشف الطلاب/ات وإدخال الدرجات دفعة واحدة ----------------
 async function importRosterBulk() {
-  const raw = prompt("الصق كشف الطلاب، طالب في كل سطر بهذا الترتيب:\\nالفصل، رقم الطالب، اسم الطالب\\nمثال: 3، 12، أحمد محمد\\nيمكن استخدام الفاصلة أو علامة التبويب أو | للفصل بين الأعمدة.");
+  const raw = prompt("الصق كشف الطلاب/ات، طالب في كل سطر بهذا الترتيب:\\nالفصل، رقم الطالب/ة، اسم الطالب/ة\\nمثال: 3، 12، أحمد محمد\\nيمكن استخدام الفاصلة أو علامة التبويب أو | للفصل بين الأعمدة.");
   if (raw === null || !raw.trim()) return;
   const lines = raw.split(/\\r?\\n/).map(x => x.trim()).filter(Boolean);
   const parsed = [], errors = [];
@@ -969,17 +969,17 @@ async function importRosterBulk() {
     const cls = canonicalizeClass(cols[0]) || String(cols[0] || "").trim();
     const number = normalizeNumber(cols[1]);
     const name = cols.slice(2).join(" ").trim();
-    if (!cls || !number || !name || /^(الفصل|class)$/i.test(cls) || /^(الرقم|رقم الطالب|number)$/i.test(number)) return;
+    if (!cls || !number || !name || /^(الفصل|class)$/i.test(cls) || /^(الرقم|رقم الطالب/ة|number)$/i.test(number)) return;
     parsed.push({ cls, number, name });
   });
-  if (!parsed.length) { alert("لم أجد صفوفًا صالحة. تأكد من ترتيب الأعمدة: الفصل، رقم الطالب، اسم الطالب."); return; }
+  if (!parsed.length) { alert("لم أجد صفوفًا صالحة. تأكد من ترتيب الأعمدة: الفصل، رقم الطالب/ة، اسم الطالب/ة."); return; }
   const seen = new Set(), unique = [];
   for (const st of parsed) {
     const rk = recKey(st.cls, st.number);
     if (seen.has(rk)) continue;
     seen.add(rk); unique.push({ ...st, rk });
   }
-  if (!confirm(`سيتم استيراد/تحديث ${unique.length} طالبًا. إذا كان الطالب موجودًا، ستبقى درجاته ورموزه محفوظة ويُحدّث الاسم فقط. متابعة؟`)) return;
+  if (!confirm(`سيتم استيراد/تحديث ${unique.length} طالبًا. إذا كان الطالب/ة موجودًا، ستبقى درجاته ورموزه محفوظة ويُحدّث الاسم فقط. متابعة؟`)) return;
   let count = 0;
   for (let i = 0; i < unique.length; i += 400) {
     const batch = writeBatch(db);
@@ -1045,12 +1045,12 @@ function renderParentsView(){
   const noNum = getFilteredStudents().filter(st => !st.number);
   const noNumBox = noNum.length ? `<div class="box" style="border-color:#f0b429;background:#fff9e6"><b>⚠️ ${noNum.length} طالب أرسلوا رموزهم بدون رقم في الكشف — لن يظهر لهم رمز ولي أمر حتى تعيّن أرقامهم:</b>
     <div style="margin-top:8px">${noNum.map(st => `<div style="margin:4px 0">${escapeHtml(st.name)} (الفصل ${escapeHtml(st.cls)}) <button class="pillbtn small primary" data-act="assignNumber" data-key="${escapeAttr(st.key)}">🔢 تعيين رقم</button></div>`).join('')}</div></div>` : '';
-  content.innerHTML=`${noNumBox}<div class="box"><h2 class="section">👨‍👩‍👦 إشعار الأولياء</h2><div class="hintline">لكل طالب رمز خاص. لا يُعرض التقرير إلا عند إدخال الفصل + رقم الطالب + الرمز.</div><table><thead><tr><th>الرقم</th><th>الطالب</th><th>الفصل</th><th>رمز ولي الأمر</th><th>الحالة</th><th class="no-print">إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">لا يوجد طلاب بأرقام.</td></tr>'}</tbody></table></div>`;
+  content.innerHTML=`${noNumBox}<div class="box"><h2 class="section">👨‍👩‍👦 إشعار الأولياء</h2><div class="hintline">لكل طالب رمز خاص. لا يُعرض التقرير إلا عند إدخال الفصل + رقم الطالب/ة + الرمز.</div><table><thead><tr><th>الرقم</th><th>الطالب/ة</th><th>الفصل</th><th>رمز ولي/ة الأمر</th><th>الحالة</th><th class="no-print">إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">لا يوجد طلاب بأرقام.</td></tr>'}</tbody></table></div>`;
   content.onclick=async e=>{
     const b=e.target.closest('[data-act]'); if(!b)return; const st=studentsIndex[b.dataset.key]; if(!st)return; const act=b.dataset.act;
     if(act==='assignNumber'){ await assignNumber(st); return; }
     if(act==='parentPublish'){ if(await publishStudent(st)){ render(); flash('✅ تم نشر/تحديث تقرير '+st.name,true); } }
-    if(act==='parentCopy'){ const rec=records[studentRecKey(st)]; if(!rec?.parentPin) { await publishStudent(st); } const msg=parentMessage(st,records[studentRecKey(st)]); if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(msg); else prompt('انسخ الرسالة:',msg); flash('تم نسخ رسالة ولي الأمر ✅',true); }
+    if(act==='parentCopy'){ const rec=records[studentRecKey(st)]; if(!rec?.parentPin) { await publishStudent(st); } const msg=parentMessage(st,records[studentRecKey(st)]); if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(msg); else prompt('انسخ الرسالة:',msg); flash('تم نسخ رسالة ولي/ة الأمر ✅',true); }
   };
 }
 
@@ -1086,8 +1086,8 @@ async function renderCurriculumView(){
     <label><input id="cvPracticeOnly" type="checkbox" ${c.practiceOnlyMode?'checked':''}> تدريب فقط</label>
     <label style="font-weight:700"><input id="cvCodeOn" type="checkbox" ${c.achievementCodeEnabled!==false?'checked':''}> 🏅 تفعيل رمز الإنجاز للطلاب</label>
     <label style="font-weight:700"><input id="cvParentOn" type="checkbox" ${c.parentPortalEnabled!==false?'checked':''}> 👨‍👩‍👦 إظهار زر إشعار أولياء الأمور</label>
-    <label style="font-weight:700"><input id="cvPortfolioOn" type="checkbox" ${c.portfolioEnabled!==false?'checked':''}> 📁 تفعيل تبويب ملف إنجاز المعلم داخل التطبيق الرئيسي</label></div>
-    <div class="hintline">إذا ألغيت «تفعيل رمز الإنجاز» يختفي الرمز وزر إرساله من التطبيق، ويصير التطبيق للتدريب فقط. ويمكنك تشغيل/إيقاف تبويب ملف إنجاز المعلم من الخيار أعلاه؛ هذا الخيار يتحكم بظهور التبويب وإتاحته في التطبيق الرئيسي.</div>
+    <label style="font-weight:700"><input id="cvPortfolioOn" type="checkbox" ${c.portfolioEnabled!==false?'checked':''}> 📁 تفعيل تبويب ملف إنجاز المعلم/ة داخل التطبيق الرئيسي</label></div>
+    <div class="hintline">إذا ألغيت «تفعيل رمز الإنجاز» يختفي الرمز وزر إرساله من التطبيق، ويصير التطبيق للتدريب فقط. ويمكنك تشغيل/إيقاف تبويب ملف إنجاز المعلم/ة من الخيار أعلاه؛ هذا الخيار يتحكم بظهور التبويب وإتاحته في التطبيق الرئيسي.</div>
     <table><thead><tr><th>الموضوع</th><th>🧠 تدريب</th><th>📝 اختبار</th><th>📅 مطلوب الآن</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="box" style="margin-top:14px"><h3>📢 الإعلان</h3><textarea id="cvAnn" rows="2" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:9px">${escapeHtml(c.announcement||'')}</textarea></div>
     <button class="pillbtn primary" id="saveCurr">💾 حفظ خطة المنهج والإعدادات</button><div id="currMsg" class="msg-inline"></div></div>`;
@@ -1106,7 +1106,7 @@ async function saveCurriculum(){
   c.practiceDisabledTopics=[]; c.examDisabledTopics=[]; c.monthlyPlan.topics=[];
   TOPIC_TITLES.forEach((_,i)=>{ if(!document.querySelector(`[data-curr-pr="${i}"]`).checked)c.practiceDisabledTopics.push(i); if(!document.querySelector(`[data-curr-ex="${i}"]`).checked)c.examDisabledTopics.push(i); if(document.querySelector(`[data-curr-plan="${i}"]`).checked)c.monthlyPlan.topics.push(i); });
   const msg=document.getElementById('currMsg'); msg.textContent='جارٍ الحفظ…'; msg.className='msg-inline';
-  try{ await setDoc(doc(db,'app_config','settings'),{...c,updatedAt:serverTimestamp()}); msg.textContent='✅ تم الحفظ وتطبيق الخطة مركزيًا على جميع الطلاب.'; msg.className='msg-inline ok'; }
+  try{ await setDoc(doc(db,'app_config','settings'),{...c,updatedAt:serverTimestamp()}); msg.textContent='✅ تم الحفظ وتطبيق الخطة مركزيًا على جميع الطلاب/ات.'; msg.className='msg-inline ok'; }
   catch(e){ console.error(e); msg.textContent='تعذّر الحفظ. تأكد من صلاحيات Firestore.'; msg.className='msg-inline err'; }
 }
 
@@ -1167,7 +1167,7 @@ function renderGradingView() {
     <div class="box">
       <h3>📚 طريقة حساب الواجبات (من ${d.hwMax})</h3>
       <select id="gHwMode" style="padding:10px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit">
-        <option value="solved" ${d.hwMode !== "mastered" ? "selected" : ""}>من المواضيع المحلولة (يُحسب الواجب لكل موضوع أجاب الطالب على كل أسئلته، حتى لو لم يتقنها)</option>
+        <option value="solved" ${d.hwMode !== "mastered" ? "selected" : ""}>من المواضيع المحلولة (يُحسب الواجب لكل موضوع أجاب الطالب/ة على كل أسئلته، حتى لو لم يتقنها)</option>
         <option value="mastered" ${d.hwMode === "mastered" ? "selected" : ""}>من المواضيع المتقنة فقط</option>
       </select>
       <div class="hintline" style="margin-top:6px">الاختبار يُحسب دائمًا من الإتقان. الواجبات توزَّع بالتساوي على المواضيع المحسوبة أدناه.</div>
@@ -1177,13 +1177,13 @@ function renderGradingView() {
       <h3>📎 الأداء المهامي</h3>
       <input type="text" id="gTaskTitle" placeholder="عنوان المهمة الحالية (مثال: بحث عن دورة الماء)" value="${escapeAttr(d.currentTask.title || "")}"
         style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px;margin-bottom:8px">
-      <label style="cursor:pointer;font-size:13.5px"><input type="checkbox" id="gAuto" ${d.currentTask.autoFullOnSubmit ? "checked" : ""}> منح الدرجة كاملة تلقائيًا عند تسليم الطالب (ويمكنك تعديلها يدويًا)</label>
+      <label style="cursor:pointer;font-size:13.5px"><input type="checkbox" id="gAuto" ${d.currentTask.autoFullOnSubmit ? "checked" : ""}> منح الدرجة كاملة تلقائيًا عند تسليم الطالب/ة (ويمكنك تعديلها يدويًا)</label>
       <div class="hintline" style="margin-top:6px">يظهر عنوان المهمة للطلاب داخل التطبيق في زر «تسليم المهمة». اتركه فارغًا لإخفاء الزر.</div>
     </div>
 
     <div class="box">
-      <h3>👨‍👩‍👦 تقرير ولي الأمر</h3>
-      <label style="cursor:pointer;font-size:13.5px"><input type="checkbox" id="gShowBh" ${d.showBehaviorToParents ? "checked" : ""}> إظهار سجل السلوك والملاحظات لولي الأمر</label>
+      <h3>👨‍👩‍👦 تقرير ولي/ة الأمر</h3>
+      <label style="cursor:pointer;font-size:13.5px"><input type="checkbox" id="gShowBh" ${d.showBehaviorToParents ? "checked" : ""}> إظهار سجل السلوك والملاحظات لولي/ة الأمر</label>
     </div>
 
     <h2 class="section">📚 المواضيع المحسوبة بالدرجات (${d.scoredTopics.length})</h2>
@@ -1218,7 +1218,7 @@ async function saveGrading() {
   grading = g;
   gradingDraft = null;
   renderGradingView();
-  flash("✅ تم حفظ توزيع الدرجات. اضغط «نشر تقارير أولياء الأمور» من تبويب ملفات الطلاب لتحديثها.", true);
+  flash("✅ تم حفظ توزيع الدرجات. اضغط «نشر تقارير أولياء الأمور» من تبويب ملفات الطلاب/ات لتحديثها.", true);
 }
 
 
@@ -1328,7 +1328,7 @@ function renderReportsView() {
       <h2 class="section">📤 أصعب 10 أبواب (الأقل نسبة إتقان)</h2>
       ${hardest.length ? `
       <table>
-        <thead><tr><th>الباب</th><th>نسبة الإتقان بين كل الطلاب الظاهرين</th></tr></thead>
+        <thead><tr><th>الباب</th><th>نسبة الإتقان بين كل الطلاب/ات الظاهرين</th></tr></thead>
         <tbody>${hardestRows}</tbody>
       </table>` : `<div class="empty">ما فيه بيانات كافية بعد.</div>`}
 
@@ -1336,7 +1336,7 @@ function renderReportsView() {
       <div class="hintline">(دقة إجمالية أقل من 50%، أو ما بدأوا أي جلسة بعد)</div>
       ${needsFollowUp.length ? `
       <table>
-        <thead><tr><th>الطالب</th><th>الفصل</th><th>الجلسات</th><th>الدقة</th></tr></thead>
+        <thead><tr><th>الطالب/ة</th><th>الفصل</th><th>الجلسات</th><th>الدقة</th></tr></thead>
         <tbody>${followRows}</tbody>
       </table>` : `<div class="empty">👍 ما فيه طلاب يحتاجون متابعة حاليًا حسب هذا المعيار.</div>`}
     </div>`;
@@ -1363,7 +1363,7 @@ function renderAllView() {
         <td>${totalQ}</td>
         <td>${accuracyPill(totalC, totalQ)}</td>
         <td>${masteredSet.size ? masteredSet.size + " باب" : "لا يوجد باب متقن بالكامل بعد"}</td>
-        <td class="no-print"><button class="pillbtn danger small" data-del-student="${escapeAttr(st.key)}" title="حذف هذا الطالب وكل جلساته">🗑️</button></td>
+        <td class="no-print"><button class="pillbtn danger small" data-del-student="${escapeAttr(st.key)}" title="حذف هذا الطالب/ة وكل جلساته">🗑️</button></td>
       </tr>`;
   }).join("");
 
@@ -1387,10 +1387,10 @@ function renderAllView() {
 
   content.innerHTML = `
     <div id="exportArea">
-      <h2 class="section">ملخص الطلاب</h2>
+      <h2 class="section">ملخص الطلاب/ات</h2>
       <table id="summaryTable">
         <thead><tr>
-          <th>الطالب</th><th>رقم الطالب</th><th>الفصل</th><th>الجلسات</th>
+          <th>الطالب/ة</th><th>رقم الطالب/ة</th><th>الفصل</th><th>الجلسات</th>
           <th>عدد الأسئلة</th><th>الدقة</th><th>الأبواب المتقنة</th><th class="no-print"></th>
         </tr></thead>
         <tbody>${summaryRows}</tbody>
@@ -1399,7 +1399,7 @@ function renderAllView() {
       <h2 class="section">تفاصيل الجلسات</h2>
       <table id="sessionsTable">
         <thead><tr>
-          <th>#</th><th>الطالب</th><th>رقم الطالب</th><th>الفصل</th><th>الوقت</th>
+          <th>#</th><th>الطالب/ة</th><th>رقم الطالب/ة</th><th>الفصل</th><th>الوقت</th>
           <th>النتيجة</th><th>المدة</th><th>الأبواب المتقنة</th><th></th><th class="no-print"></th>
         </tr></thead>
         <tbody>${sessionRows}</tbody>
@@ -1433,7 +1433,7 @@ function renderAllView() {
 async function deleteStudent(key) {
   const st = studentsIndex[key];
   if (!st) return;
-  const ok = confirm(`متأكد تبي تحذف الطالب «${st.name}» وكل جلساته (${st.sessions.length})؟ هذا الإجراء لا يمكن التراجع عنه.`);
+  const ok = confirm(`متأكد تبي تحذف الطالب/ة «${st.name}» وكل جلساته (${st.sessions.length})؟ هذا الإجراء لا يمكن التراجع عنه.`);
   if (!ok) return;
 
   const dbIds = st.sessions.filter(s => s.source === "db" && s.id).map(s => s.id);
@@ -1450,7 +1450,7 @@ async function deleteStudent(key) {
       const k = num ? `${cls}#${num}` : `${cls}#${s.decodedName || s.studentName}`;
       return k !== key;
     });
-    // حذف سجل الطالب وتقرير ولي أمره أيضًا
+    // حذف سجل الطالب/ة وتقرير ولي أمره أيضًا
     const rkDel = st.number ? recKey(st.cls, st.number) : "";
     if (rkDel && records[rkDel]) {
       const recDel = records[rkDel];
@@ -1462,7 +1462,7 @@ async function deleteStudent(key) {
     rebuildAndRender();
   } catch (err) {
     console.error(err);
-    alert("تعذّر حذف الطالب. تأكد من الاتصال وحاول مرة أخرى.");
+    alert("تعذّر حذف الطالب/ة. تأكد من الاتصال وحاول مرة أخرى.");
   }
 }
 
@@ -1481,7 +1481,7 @@ async function deleteSession(docId, key) {
 
 document.getElementById("deleteAllBtn").addEventListener("click", async () => {
   if (!dbSubs.length && !Object.keys(records).length) { alert("ما فيه بيانات محفوظة للحذف."); return; }
-  const typed = prompt(`سيتم حذف كل الطلاب وجلساتهم وسجلاتهم ودرجاتهم وتقارير أولياء الأمور نهائيًا من كل الفصول (${dbSubs.length} جلسة). للتأكيد، اكتب كلمة "حذف" بالضبط:`);
+  const typed = prompt(`سيتم حذف كل الطلاب/ات وجلساتهم وسجلاتهم ودرجاتهم وتقارير أولياء الأمور نهائيًا من كل الفصول (${dbSubs.length} جلسة). للتأكيد، اكتب كلمة "حذف" بالضبط:`);
   if (typed !== "حذف") { if (typed !== null) alert("لم تتم كتابة الكلمة بشكل صحيح، تم الإلغاء."); return; }
   try {
     const ids = dbSubs.map(s => s.id);
@@ -1491,7 +1491,7 @@ document.getElementById("deleteAllBtn").addEventListener("click", async () => {
       ids.slice(i, i + CHUNK).forEach(id => batch.delete(doc(db, "submissions", id)));
       await batch.commit();
     }
-    // سجلات الطلاب وتقارير أولياء الأمور
+    // سجلات الطلاب/ات وتقارير أولياء الأمور
     const recIds = Object.keys(records);
     const delRefs = [];
     recIds.forEach(k => {
@@ -1509,10 +1509,10 @@ document.getElementById("deleteAllBtn").addEventListener("click", async () => {
     state.focusKey = "";
     state.openStudent = "";
     rebuildAndRender();
-    alert("تم حذف جميع الطلاب والجلسات وسجلاتهم.");
+    alert("تم حذف جميع الطلاب/ات والجلسات وسجلاتهم.");
   } catch (err) {
     console.error(err);
-    alert("تعذّر حذف البيانات بالكامل. حاول مرة أخرى، أو احذف الطلاب واحدًا واحدًا.");
+    alert("تعذّر حذف البيانات بالكامل. حاول مرة أخرى، أو احذف الطلاب/ات واحدًا واحدًا.");
   }
 });
 
@@ -1529,7 +1529,7 @@ function renderChaptersView() {
   const chapters = Object.keys(chapterMap).sort((a, b) => a.localeCompare(b, "ar"));
 
   if (!chapters.length) {
-    content.innerHTML = `<div class="empty">ما فيه أي باب متقن بالكامل بعد لدى الطلاب الحاليين.</div>`;
+    content.innerHTML = `<div class="empty">ما فيه أي باب متقن بالكامل بعد لدى الطلاب/ات الحاليين.</div>`;
     return;
   }
 
@@ -1557,7 +1557,7 @@ document.getElementById("exportCsv").addEventListener("click", () => {
     const cells = [...tr.children].map(td => `"${td.innerText.replace(/"/g, '""')}"`);
     csv += cells.join(",") + "\r\n";
   });
-  downloadBlob(csv, "text/csv;charset=utf-8", "ملخص_الطلاب.csv");
+  downloadBlob(csv, "text/csv;charset=utf-8", "ملخص_الطلاب/ات.csv");
 });
 
 document.getElementById("exportWord").addEventListener("click", () => {
@@ -1570,7 +1570,7 @@ document.getElementById("exportWord").addEventListener("click", () => {
       th,td{border:1px solid #999;padding:6px 8px;text-align:right}
       th{background:#eef5f4}
     </style></head><body>${area.innerHTML}</body></html>`;
-  downloadBlob(html, "application/msword", "تقرير_الطلاب.doc");
+  downloadBlob(html, "application/msword", "تقرير_الطلاب/ات.doc");
 });
 
 document.getElementById("exportPdf").addEventListener("click", () => {
@@ -1579,7 +1579,7 @@ document.getElementById("exportPdf").addEventListener("click", () => {
   if (typeof html2pdf === "undefined") { alert("تعذّر تحميل أداة PDF، جرّب الطباعة بدلاً منها."); return; }
   html2pdf().set({
     margin: 10,
-    filename: "تقرير_الطلاب.pdf",
+    filename: "تقرير_الطلاب/ات.pdf",
     html2canvas: { scale: 2 },
     jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
   }).from(area).save();
