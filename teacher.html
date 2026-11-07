@@ -37,6 +37,16 @@
     font-family:inherit;font-size:15px;margin-bottom:12px;background:#fbfdfd;
   }
   .loginCard input:focus{outline:none;border-color:var(--brand)}
+  .password-wrap{position:relative;display:flex;align-items:center;margin-bottom:12px}
+  .password-wrap input{margin:0;padding-left:76px}
+  .password-toggle{position:absolute;left:7px;top:50%;transform:translateY(-50%);width:auto!important;
+    padding:6px 9px!important;border:1px solid var(--line)!important;border-radius:8px!important;
+    background:#eef5f4!important;color:var(--brand-dark)!important;font:700 12px 'Tajawal',sans-serif!important}
+  .login-links{display:flex;justify-content:center;margin-top:13px}
+  .login-link{width:auto!important;padding:5px 8px!important;background:transparent!important;
+    color:var(--brand-dark)!important;text-decoration:underline;font:700 13px 'Tajawal',sans-serif!important}
+  #loginErr,#resetMsg{font-size:13.5px;margin-top:10px;display:none;line-height:1.7}
+  #loginErr{color:var(--err)} #resetMsg{color:var(--ok)}
   .loginCard button{
     width:100%;border:none;border-radius:12px;padding:13px;font-weight:900;font-size:15px;
     background:var(--brand);color:#fff;cursor:pointer;
@@ -133,10 +143,15 @@
     <h1>دخول المعلم/ة</h1>
     <form id="loginForm">
       <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required autocomplete="username">
-      <input type="password" id="loginPass" placeholder="كلمة السر" required autocomplete="current-password">
+      <div class="password-wrap">
+        <input type="password" id="loginPass" placeholder="كلمة السر" required autocomplete="current-password">
+        <button type="button" class="password-toggle" id="togglePassword" aria-label="إظهار كلمة السر" aria-pressed="false">إظهار</button>
+      </div>
       <button type="submit" id="loginBtn">دخول</button>
     </form>
-    <div id="loginErr">بيانات الدخول غير صحيحة</div>
+    <div class="login-links"><button type="button" class="login-link" id="forgotPasswordBtn">نسيت كلمة السر؟ استعادة عبر البريد</button></div>
+    <div id="loginErr" role="alert">تعذّر تسجيل الدخول. تحقق من البريد وكلمة السر أو الاتصال.</div>
+    <div id="resetMsg" role="status" aria-live="polite"></div>
   </div>
 </div>
 
@@ -195,7 +210,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, getDoc, setDoc, query, orderBy, doc, deleteDoc, writeBatch, serverTimestamp
@@ -211,16 +226,72 @@ const dashboard = document.getElementById("dashboard");
 const content = document.getElementById("content");
 
 // ---------------- تسجيل الدخول ----------------
+const loginEmailEl = document.getElementById("loginEmail");
+const loginPassEl = document.getElementById("loginPass");
+const loginErrEl = document.getElementById("loginErr");
+const resetMsgEl = document.getElementById("resetMsg");
+
+// إظهار/إخفاء كلمة السر دون تغيير قيمتها
+ document.getElementById("togglePassword").addEventListener("click", () => {
+  const visible = loginPassEl.type === "password";
+  loginPassEl.type = visible ? "text" : "password";
+  const btn = document.getElementById("togglePassword");
+  btn.textContent = visible ? "إخفاء" : "إظهار";
+  btn.setAttribute("aria-label", visible ? "إخفاء كلمة السر" : "إظهار كلمة السر");
+  btn.setAttribute("aria-pressed", String(visible));
+});
+
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const email = document.getElementById("loginEmail").value.trim();
-  const pass = document.getElementById("loginPass").value;
-  const errEl = document.getElementById("loginErr");
-  errEl.style.display = "none";
+  const email = loginEmailEl.value.trim();
+  const pass = loginPassEl.value;
+  loginErrEl.style.display = "none";
+  resetMsgEl.style.display = "none";
   try {
     await signInWithEmailAndPassword(auth, email, pass);
   } catch (err) {
-    errEl.style.display = "block";
+    console.error("Teacher login failed:", err.code || err.message);
+    const messages = {
+      "auth/invalid-credential": "البريد الإلكتروني أو كلمة السر غير صحيحة.",
+      "auth/user-not-found": "لا يوجد حساب بهذا البريد الإلكتروني.",
+      "auth/wrong-password": "كلمة السر غير صحيحة.",
+      "auth/too-many-requests": "تمت محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا.",
+      "auth/network-request-failed": "تعذّر الاتصال. تحقق من الإنترنت ثم أعد المحاولة."
+    };
+    loginErrEl.textContent = messages[err.code] || "تعذّر تسجيل الدخول. رمز الخطأ: " + (err.code || "غير معروف");
+    loginErrEl.style.display = "block";
+  }
+});
+
+document.getElementById("forgotPasswordBtn").addEventListener("click", async () => {
+  const email = loginEmailEl.value.trim();
+  loginErrEl.style.display = "none";
+  resetMsgEl.style.display = "none";
+  if (!email) {
+    loginErrEl.textContent = "اكتب بريدك الإلكتروني أولًا، ثم اضغط استعادة كلمة السر.";
+    loginErrEl.style.display = "block";
+    loginEmailEl.focus();
+    return;
+  }
+  const btn = document.getElementById("forgotPasswordBtn");
+  btn.disabled = true;
+  try {
+    auth.languageCode = "ar";
+    await sendPasswordResetEmail(auth, email);
+    resetMsgEl.textContent = "إذا كان البريد مسجلًا في النظام، فستصلك رسالة لاستعادة كلمة السر. افحص الوارد والرسائل غير المرغوب فيها.";
+    resetMsgEl.style.display = "block";
+  } catch (err) {
+    console.error("Password reset failed:", err.code || err.message);
+    const messages = {
+      "auth/user-not-found": "لا يوجد حساب مسجل بهذا البريد الإلكتروني.",
+      "auth/invalid-email": "صيغة البريد الإلكتروني غير صحيحة.",
+      "auth/too-many-requests": "طلبات كثيرة. انتظر قليلًا ثم حاول مجددًا.",
+      "auth/unauthorized-continue-uri": "إعدادات Firebase لا تسمح برابط هذا الموقع. يجب إضافة mohfox2-lab.github.io إلى النطاقات المصرح بها في Firebase Authentication."
+    };
+    loginErrEl.textContent = messages[err.code] || "تعذّر إرسال رابط الاستعادة. رمز الخطأ: " + (err.code || "غير معروف");
+    loginErrEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
   }
 });
 document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
@@ -969,7 +1040,7 @@ async function importRosterBulk() {
     const cls = canonicalizeClass(cols[0]) || String(cols[0] || "").trim();
     const number = normalizeNumber(cols[1]);
     const name = cols.slice(2).join(" ").trim();
-    if (!cls || !number || !name || /^(الفصل|class)$/i.test(cls) || /^(الرقم|رقم الطالب/ة|number)$/i.test(number)) return;
+    if (!cls || !number || !name || /^(الفصل|class)$/i.test(cls) || /^(الرقم|رقم الطالب\/ة|number)$/i.test(number)) return;
     parsed.push({ cls, number, name });
   });
   if (!parsed.length) { alert("لم أجد صفوفًا صالحة. تأكد من ترتيب الأعمدة: الفصل، رقم الطالب/ة، اسم الطالب/ة."); return; }
