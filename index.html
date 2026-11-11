@@ -102,6 +102,23 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
 <script>
+// ===== تعدد المعلمين: كل معلم/ة له مساحة بيانات مستقلة =====
+function manhajTenantFromUrl(){
+  try{
+    var p = new URLSearchParams(location.search).get('t');
+    if(p !== null){ localStorage.setItem('manhaj_tenant', p === 'main' ? '' : p); }
+    return localStorage.getItem('manhaj_tenant') || '';
+  }catch(e){ return ''; }
+}
+function manhajScopedDb(raw, tid){
+  if(!raw || !tid) return raw;
+  return new Proxy(raw, { get: function(t, k){
+    if(k === 'collection') return function(n){ return t.collection('tdata').doc(tid).collection(n); };
+    var v = t[k]; return typeof v === 'function' ? v.bind(t) : v;
+  }});
+}
+function manhajWithTenant(url, tid){ if(!tid) return url; return url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + encodeURIComponent(tid); }
+
 (function () {
   "use strict";
 
@@ -244,7 +261,7 @@
     }
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const db = manhajScopedDb(firebase.firestore(), manhajTenantFromUrl());
 
     db.collection("app_config").doc("settings").get().then(function(doc){
       setClassOptions(doc.exists ? (doc.data().classes || []) : DEFAULT_CLASSES);

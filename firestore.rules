@@ -6,6 +6,73 @@ service cloud.firestore {
         && request.auth.token.email == 'mohfox2@hotmail.com';
     }
 
+    // معلم/ة مفعّل: يملك المساحة tdata/{tid} فقط إذا كان tid هو حسابه ومسجّل ومفعّل في teachers.
+    function isOwner(tid) {
+      return request.auth != null
+        && request.auth.uid == tid
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/teachers/$(request.auth.token.email))
+        && get(/databases/$(database)/documents/teachers/$(request.auth.token.email)).data.uid == tid
+        && get(/databases/$(database)/documents/teachers/$(request.auth.token.email)).data.active == true;
+    }
+    function tenantActive(tid) {
+      return exists(/databases/$(database)/documents/tpublic/$(tid))
+        && get(/databases/$(database)/documents/tpublic/$(tid)).data.active == true;
+    }
+
+    // قائمة المعلمين ورموزهم: المدير يدير، والمعلم/ة يقرأ وثيقته فقط.
+    match /teachers/{email} {
+      allow read: if isTeacher() || (request.auth != null && request.auth.token.email == email);
+      allow write: if isTeacher();
+    }
+    match /tpublic/{tid} {
+      allow get: if true;
+      allow list: if isTeacher();
+      allow write: if isTeacher();
+    }
+
+    // ===== مساحة كل معلم/ة: نفس قواعد المدير لكن داخل tdata/{tid} =====
+    match /tdata/{tid}/submissions/{docId} {
+      allow create: if tenantActive(tid)
+        && request.resource.data.keys().hasAll(['studentName', 'studentClass', 'rosterNumber', 'rawCode', 'createdAt'])
+        && request.resource.data.studentName is string && request.resource.data.studentName.size() <= 120
+        && request.resource.data.studentClass is string && request.resource.data.studentClass.size() <= 40
+        && request.resource.data.rosterNumber is string && request.resource.data.rosterNumber.size() <= 30
+        && request.resource.data.rawCode is string && request.resource.data.rawCode.size() <= 3000
+        && request.resource.data.createdAt is timestamp;
+      allow read, update, delete: if isOwner(tid);
+    }
+    match /tdata/{tid}/task_submissions/{docId} {
+      allow create: if tenantActive(tid)
+        && request.resource.data.keys().hasAll(['studentName', 'studentClass', 'rosterNumber', 'taskTitle', 'link', 'note', 'createdAt'])
+        && request.resource.data.studentName is string && request.resource.data.studentName.size() > 0 && request.resource.data.studentName.size() <= 120
+        && request.resource.data.studentClass is string && request.resource.data.studentClass.size() > 0 && request.resource.data.studentClass.size() <= 40
+        && request.resource.data.rosterNumber is string && request.resource.data.rosterNumber.size() > 0 && request.resource.data.rosterNumber.size() <= 30
+        && request.resource.data.taskTitle is string && request.resource.data.taskTitle.size() <= 200
+        && request.resource.data.link is string && request.resource.data.link.size() <= 2048
+        && request.resource.data.note is string && request.resource.data.note.size() <= 3000
+        && (request.resource.data.link.size() > 0 || request.resource.data.note.size() > 0)
+        && request.resource.data.createdAt is timestamp;
+      allow read, update, delete: if isOwner(tid);
+    }
+    match /tdata/{tid}/app_config/{docId} {
+      allow get: if docId == 'settings' || docId == 'grading' || isOwner(tid);
+      allow list: if isOwner(tid);
+      allow create, update, delete: if isOwner(tid);
+    }
+    match /tdata/{tid}/parent_reports/{docId} {
+      allow get: if isOwner(tid) || (
+        resource.data.parentPin is string
+        && resource.data.parentPin.size() >= 6
+        && docId.split('_')[docId.split('_').size() - 1] == resource.data.parentPin);
+      allow list: if false;
+      allow create, update, delete: if isOwner(tid);
+    }
+    match /tdata/{tid}/{coll}/{docId} {
+      allow read, write: if isOwner(tid)
+        && coll in ['student_records', 'portfolio_items', 'portfolio_files', 'portfolio_plans', 'portfolio_meta'];
+    }
+
     // رموز الإنجاز: الإرسال متاح دون حساب، والإدارة للمعلم فقط.
     match /submissions/{docId} {
       allow create: if

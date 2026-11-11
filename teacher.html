@@ -144,7 +144,7 @@
     <form id="loginForm">
       <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required autocomplete="username">
       <div class="password-wrap">
-        <input type="password" id="loginPass" placeholder="كلمة السر" required autocomplete="current-password">
+        <input type="password" id="loginPass" placeholder="رمز الدخول" required autocomplete="current-password">
         <button type="button" class="password-toggle" id="togglePassword" aria-label="إظهار كلمة السر" aria-pressed="false">إظهار</button>
       </div>
       <button type="submit" id="loginBtn">دخول</button>
@@ -185,6 +185,8 @@
       <button class="pillbtn" data-view="grading">⚙️ توزيع الدرجات</button>
       <button class="pillbtn" data-view="curriculum">📚 خطة المنهج</button>
       <button class="pillbtn" data-view="parents">👨‍👩‍👦 إشعار الأولياء</button>
+      <button class="pillbtn" data-view="mylinks">🔗 روابطي</button>
+      <button class="pillbtn" data-view="teachers" id="teachersTabBtn" style="display:none">👥 المعلمون ورموز الدخول</button>
     </div>
 
     <!-- فلاتر -->
@@ -210,16 +212,22 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, getDocs, getDoc, setDoc, query, orderBy, doc, deleteDoc, writeBatch, serverTimestamp
+  getFirestore, collection as _collection, getDocs, getDoc, setDoc, query, orderBy, doc as _doc, deleteDoc, writeBatch, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { firebaseConfig, decodeCode, formatTimestamp, canonicalizeClass, normalizeNumber, recKey, generatePin, computeReport, normalizeGrading, topicTestPoints, TOPIC_TITLES } from "./common.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const ADMIN_EMAIL_T = "mohfox2@hotmail.com";
+// كل معلم/ة (غير المدير) يعمل داخل tdata/{uid} فلا يرى بيانات غيره
+let TID = "";
+const collection = (d, name, ...rest) => TID ? _collection(d, "tdata", TID, name, ...rest) : _collection(d, name, ...rest);
+const doc = (d, name, ...rest) => TID ? _doc(d, "tdata", TID, name, ...rest) : _doc(d, name, ...rest);
+const isMainAdmin = () => !!(auth.currentUser && auth.currentUser.email === ADMIN_EMAIL_T);
 
 const loginScreen = document.getElementById("loginScreen");
 const dashboard = document.getElementById("dashboard");
@@ -252,7 +260,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   } catch (err) {
     console.error("Teacher login failed:", err.code || err.message);
     const messages = {
-      "auth/invalid-credential": "البريد الإلكتروني أو كلمة السر غير صحيحة.",
+      "auth/invalid-credential": "البريد الإلكتروني أو رمز الدخول غير صحيح.",
       "auth/user-not-found": "لا يوجد حساب بهذا البريد الإلكتروني.",
       "auth/wrong-password": "كلمة السر غير صحيحة.",
       "auth/too-many-requests": "تمت محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا.",
@@ -296,8 +304,24 @@ document.getElementById("forgotPasswordBtn").addEventListener("click", async () 
 });
 document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
+    if (user.email === ADMIN_EMAIL_T) { TID = ""; }
+    else {
+      let ok = false;
+      try {
+        const t = await getDoc(_doc(db, "teachers", String(user.email || "").toLowerCase()));
+        ok = t.exists() && t.data().active !== false && t.data().uid === user.uid;
+      } catch (e) { console.warn(e); }
+      if (!ok) {
+        await signOut(auth);
+        loginErrEl.textContent = "هذا البريد غير مفعّل أو موقوف. تواصل مع مدير التطبيق.";
+        loginErrEl.style.display = "block";
+        return;
+      }
+      TID = user.uid;
+    }
+    const tb = document.getElementById("teachersTabBtn"); if (tb) tb.style.display = isMainAdmin() ? "" : "none";
     loginScreen.classList.add("hidden");
     dashboard.classList.remove("hidden");
     loadData();
@@ -544,6 +568,8 @@ function render() {
   if (state.view === "grading") { renderGradingView(); return; }
   if (state.view === "curriculum") { renderCurriculumView(); return; }
   if (state.view === "parents") { renderParentsView(); return; }
+  if (state.view === "mylinks") { renderMyLinksView(); return; }
+  if (state.view === "teachers") { renderTeachersView(); return; }
   renderAllView(); // "all" و "masteredOnly" يشتركان بنفس شكل الجدولين
 }
 
@@ -658,7 +684,7 @@ async function publishAll() {
 
 function parentLink() {
   // حل نسبي لمجلد الصفحة نفسها، حتى يعمل على GitHub Pages داخل مستودع فرعي.
-  return new URL("./parents.html", window.location.href).href;
+  const u = new URL("./parents.html", window.location.href); if (TID) u.searchParams.set("t", TID); return u.href;
 }
 
 function parentMessage(st, rec) {
@@ -1123,6 +1149,84 @@ function renderParentsView(){
     if(act==='parentPublish'){ if(await publishStudent(st)){ render(); flash('✅ تم نشر/تحديث تقرير '+st.name,true); } }
     if(act==='parentCopy'){ const rec=records[studentRecKey(st)]; if(!rec?.parentPin) { await publishStudent(st); } const msg=parentMessage(st,records[studentRecKey(st)]); if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(msg); else prompt('انسخ الرسالة:',msg); flash('تم نسخ رسالة ولي/ة الأمر ✅',true); }
   };
+}
+
+// ---------------- 🔗 روابط المعلم/ة و 👥 إدارة المعلمين ----------------
+function linksFor(tid){
+  const mk = (path) => { const u = new URL(path, window.location.href); if (tid) u.searchParams.set("t", tid); return u.href; };
+  return { teacher: mk("./teacher.html"), submit: mk("./index.html"), parents: mk("./parents.html"), app: mk("../app/index.html") };
+}
+function copyText(t){ (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => flash("✅ تم النسخ.", true)).catch(() => prompt("انسخ:", t)); }
+window.__copyText = copyText;
+function renderMyLinksView(){
+  const L = linksFor(TID);
+  const row = (label, url, hint) => `<div style="margin:10px 0"><div style="font-weight:800">${label}</div><div class="hintline">${hint}</div><div class="rowbtns"><input readonly value="${escapeAttr(url)}" style="flex:1;min-width:240px;direction:ltr;padding:8px;border:1px solid var(--line);border-radius:9px"><button class="pillbtn" onclick="__copyText('${escapeAttr(url)}')">📋 نسخ</button></div></div>`;
+  content.innerHTML = `<div class="box"><h2 class="section">🔗 روابطي الخاصة</h2>
+    <div class="hintline">أرسل هذه الروابط لطلابك وأولياء أمورهم. كل ما يرسلونه يصل إلى حسابك أنت فقط، ولا يراه أي معلم/ة آخر.</div>
+    ${row("📱 تطبيق الطلاب", L.app, "يفتحه الطالب/ة للتدريب والاختبار؛ رمز الإنجاز والمهام تصل لك مباشرة.")}
+    ${row("📨 صفحة إرسال رمز الإنجاز", L.submit, "للطلاب الذين يرسلون الرمز يدويًا.")}
+    ${row("👨‍👩‍👦 بوابة أولياء الأمور", L.parents, "يدخل ولي الأمر برقم الطالب/ة ورمزه.")}
+    ${row("👨‍🏫 لوحة المعلم/ة", L.teacher, "رابط دخولك أنت.")}</div>`;
+}
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function genAccessCode(){ const a = new Uint32Array(8); crypto.getRandomValues(a); return Array.from(a, x => CODE_CHARS[x % CODE_CHARS.length]).join(""); }
+let creatorAuth = null;
+function getCreatorAuth(){ if (!creatorAuth) creatorAuth = getAuth(initializeApp(firebaseConfig, "teacher-creator")); return creatorAuth; }
+function teacherMessage(t){
+  const L = linksFor(t.uid);
+  return `السلام عليكم أ. ${t.name || ""}\nتم تفعيل حسابك في تطبيق منهج العلوم.\n\nرابط لوحة المعلم/ة:\n${L.teacher}\nالبريد: ${t.email}\nرمز الدخول: ${t.code}\n\nرابط تطبيق طلابك:\n${L.app}\nرابط أولياء الأمور:\n${L.parents}\n\nبياناتك وبيانات طلابك خاصة بك ولا يراها غيرك.`;
+}
+let teachersList = null;
+async function renderTeachersView(){
+  if (!isMainAdmin()) { content.innerHTML = '<div class="empty">هذا القسم لمدير التطبيق فقط.</div>'; return; }
+  content.innerHTML = '<div class="loading">جارٍ تحميل المعلمين…</div>';
+  try { const s = await getDocs(_collection(db, "teachers")); teachersList = s.docs.map(d => d.data()).sort((a,b) => (a.name||"").localeCompare(b.name||"", "ar")); }
+  catch (e) { content.innerHTML = '<div class="empty">تعذّر تحميل المعلمين. تأكد من نشر قواعد Firestore الجديدة (firestore.rules).</div>'; return; }
+  const rows = teachersList.map((t, i) => `<tr><td>${escapeHtml(t.name||"")}</td><td style="direction:ltr">${escapeHtml(t.email)}</td>
+    <td style="direction:ltr;font-weight:900;letter-spacing:2px">${escapeHtml(t.code||"—")}</td>
+    <td>${t.active === false ? '<span style="color:var(--err)">موقوف</span>' : '<span style="color:var(--ok)">مفعّل</span>'}</td>
+    <td class="rowbtns"><button class="pillbtn" data-tcopy="${i}">📋 نسخ الرسالة</button><button class="pillbtn" data-twa="${i}">💬 واتساب</button>
+    <button class="pillbtn ${t.active === false ? '' : 'danger'}" data-ttoggle="${i}">${t.active === false ? '✅ تفعيل' : '⛔ إيقاف'}</button></td></tr>`).join("");
+  content.innerHTML = `<div class="box"><h2 class="section">👥 المعلمون ورموز الدخول</h2>
+    <div class="hintline">أضف بريد المعلم/ة، وسيتولّد رمز دخول تلقائيًا. أرسل له الرسالة؛ يدخل بالبريد + الرمز، وتكون بياناته وطلابه منفصلة تمامًا عن غيره.</div>
+    <div class="rowbtns"><input id="tName" placeholder="اسم المعلم/ة" style="padding:8px;border:1px solid var(--line);border-radius:9px">
+      <input id="tEmail" type="email" placeholder="البريد الإلكتروني" style="direction:ltr;padding:8px;border:1px solid var(--line);border-radius:9px;min-width:220px">
+      <button class="pillbtn primary" id="tAddBtn">➕ إضافة وتوليد رمز</button></div>
+    <div id="tMsg" class="msg-inline"></div>
+    <table><thead><tr><th>الاسم</th><th>البريد</th><th>رمز الدخول</th><th>الحالة</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5">لا يوجد معلمون بعد.</td></tr>'}</tbody></table>
+    <div class="hintline">ملاحظة: إيقاف المعلم/ة يمنعه فورًا من الدخول ومن الوصول لبياناته. إذا نسي المعلم/ة رمزه أرسل له الرسالة مرة أخرى.</div></div>`;
+  const msg = (t, ok) => { const m = document.getElementById("tMsg"); m.textContent = t; m.style.color = ok ? "var(--ok)" : "var(--err)"; };
+  document.getElementById("tAddBtn").onclick = async () => {
+    const name = document.getElementById("tName").value.trim();
+    const email = document.getElementById("tEmail").value.trim().toLowerCase();
+    if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg("اكتب الاسم وبريدًا صحيحًا.", false); return; }
+    if (email === ADMIN_EMAIL_T || teachersList.some(t => t.email === email)) { msg("هذا البريد مضاف مسبقًا.", false); return; }
+    const code = genAccessCode();
+    msg("جارٍ إنشاء الحساب…", true);
+    try {
+      const ca = getCreatorAuth();
+      const cred = await createUserWithEmailAndPassword(ca, email, code);
+      const uid = cred.user.uid;
+      await signOut(ca);
+      const rec = { name, email, code, uid, active: true, createdAt: serverTimestamp() };
+      await setDoc(_doc(db, "teachers", email), rec);
+      await setDoc(_doc(db, "tpublic", uid), { name, active: true });
+      msg("✅ تم إنشاء الحساب. رمز الدخول: " + code + " — انسخ الرسالة وأرسلها له.", true);
+      setTimeout(renderTeachersView, 1200);
+    } catch (e) {
+      console.error(e);
+      msg(e.code === "auth/email-already-in-use" ? "هذا البريد له حساب سابق في النظام؛ لا يمكن توليد رمز جديد له من هنا. استخدم بريدًا آخر." : "تعذّر الإنشاء: " + (e.code || e.message), false);
+    }
+  };
+  content.querySelectorAll("[data-tcopy]").forEach(b => b.onclick = () => copyText(teacherMessage(teachersList[+b.dataset.tcopy])));
+  content.querySelectorAll("[data-twa]").forEach(b => b.onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent(teacherMessage(teachersList[+b.dataset.twa])), "_blank"));
+  content.querySelectorAll("[data-ttoggle]").forEach(b => b.onclick = async () => {
+    const t = teachersList[+b.dataset.ttoggle]; const active = t.active === false;
+    if (!active && !confirm("إيقاف " + t.name + "؟ لن يستطيع الدخول.")) return;
+    await setDoc(_doc(db, "teachers", t.email), { active }, { merge: true });
+    await setDoc(_doc(db, "tpublic", t.uid), { active }, { merge: true });
+    renderTeachersView();
+  });
 }
 
 // ---------------- 📚 خطة المنهج والتحكم المركزي ----------------
