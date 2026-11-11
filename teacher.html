@@ -158,7 +158,7 @@
 <!-- لوحة التحكم -->
 <div id="dashboard" class="hidden">
   <header class="no-print">
-    <h1>👨‍🏫 لوحة المعلم/ة</h1>
+    <h1>👨‍🏫 لوحة المعلم/ة <small style="font-size:11px;opacity:.7">v5</small></h1>
     <button id="logoutBtn">🔒 خروج</button>
   </header>
   <main>
@@ -187,6 +187,7 @@
       <button class="pillbtn" data-view="parents">👨‍👩‍👦 إشعار الأولياء</button>
       <button class="pillbtn" data-view="mylinks">🔗 روابطي</button>
       <button class="pillbtn" data-view="teachers" id="teachersTabBtn" style="display:none">👥 المعلمون ورموز الدخول</button>
+      <div id="adminHint" style="width:100%;font-size:12px;color:#b45309"></div>
     </div>
 
     <!-- فلاتر -->
@@ -321,7 +322,7 @@ onAuthStateChanged(auth, async (user) => {
       }
       TID = user.uid;
     }
-    const tb = document.getElementById("teachersTabBtn"); if (tb) tb.style.display = isMainAdmin() ? "" : "none";
+    const tb = document.getElementById("teachersTabBtn"); if (tb) tb.style.display = isMainAdmin() ? "" : "none"; const au = document.getElementById("adminHint"); if (au) au.textContent = isMainAdmin() ? "" : ("أنت داخل بحساب: " + (user.email||"") + " — زر «👥 المعلمون ورموز الدخول» يظهر فقط لحساب المدير " + ADMIN_EMAIL_T);
     loginScreen.classList.add("hidden");
     dashboard.classList.remove("hidden");
     loadData();
